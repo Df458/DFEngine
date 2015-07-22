@@ -5,16 +5,16 @@
 #include "RenderUtil.h"
 #include "Transform.h"
 #include "Util.h"
+#include "XmlSerializable.h"
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
-#include <rapidxml.hpp>
 #include <vector>
 
 class IScene;
 class IShader;
 class IFont;
 
-class ISceneNode
+class ISceneNode : public IXmlSerializable
 {
 public:
     virtual ~ISceneNode(void) = 0;
@@ -23,7 +23,7 @@ public:
     virtual bool addChild(ISceneNode* child) = 0;
     virtual bool removeChild(ISceneNode* child) = 0;
     virtual bool hasChild(ISceneNode* child) const = 0;
-    virtual void buildFromXML(rapidxml::xml_node<>* node) = 0;
+    //virtual bool fromXml(rapidxml::xml_node<>* node) = 0;
     virtual bool getVisible(void) const = 0;
     virtual bool getRenders(void) const = 0;
     virtual void setRenders(bool visible) = 0;
@@ -77,7 +77,7 @@ public:
     virtual bool removeChild(ISceneNode* child);
     virtual bool hasChild(ISceneNode* child) const;
     virtual bool getVisible(void) const;
-    virtual void buildFromXML(rapidxml::xml_node<>* node);
+    virtual bool fromXml(rapidxml::xml_node<>* node);
     virtual bool getRenders(void) const { return m_renders; }
     virtual void setRenders(bool visible) { m_renders = visible; }
     virtual void deleteChildren(void);
@@ -114,7 +114,7 @@ public:
     ModelSceneNode(IModel* model, IShader* shader, GLuint texture = 0, RenderPass pass = RenderPass::DYNAMIC_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool getVisible(void);
-    virtual void buildFromXML(rapidxml::xml_node<>* node);
+    virtual bool fromXml(rapidxml::xml_node<>* node);
 protected:
     IModel* u_model = nullptr;
     IShader* u_shader = nullptr;
@@ -128,7 +128,7 @@ public:
     CameraSceneNode(rapidxml::xml_node<>* node);
     inline const glm::mat4 getProjectionMatrix(void) const { return m_projection; }
     inline const glm::mat4 getViewMatrix(void) const { return m_view; }
-    void buildFromXML(rapidxml::xml_node<>* node);
+    bool fromXml(rapidxml::xml_node<>* node);
     void reProject(float width, float height);
     void lookAt(glm::vec3 target);
     void setActive(bool active) { m_active = active; }
@@ -179,7 +179,7 @@ public:
     BillboardSceneNode();
     BillboardSceneNode(GLuint texture, glm::vec2 dims = {1, 1}, RGBAColor color = RGBAColor(Color::White, 1.0f), RenderPass pass = RenderPass::UI_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
-    virtual void buildFromXML(rapidxml::xml_node<>* node);
+    virtual bool fromXml(rapidxml::xml_node<>* node);
     void setColor(RGBAColor color) { m_color = color; }
     RGBAColor getColor(void) { return m_color; }
     virtual bool getVisible(void);
@@ -216,7 +216,7 @@ public:
     ParticleSceneNode();
     ParticleSceneNode(GLuint texture, RGBAColor color, float rate, float life = 4, glm::vec2 dims = {1, 1}, bool burst = false, RenderPass pass = RenderPass::UI_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
-    virtual void buildFromXML(rapidxml::xml_node<>* node);
+    virtual bool fromXml(rapidxml::xml_node<>* node);
     virtual bool getVisible(void);
     virtual void update(float delta_time);
     virtual void createParticle(void);
@@ -259,7 +259,7 @@ public:
     TextSceneNode();
     TextSceneNode(IFont* font, const char* text, RenderPass pass = RenderPass::UI_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
-    virtual void buildFromXML(rapidxml::xml_node<>* node);
+    virtual bool fromXml(rapidxml::xml_node<>* node);
     virtual bool getVisible(void);
     void setText(const char* text) { m_text = text; }
     std::string getText(void) { return m_text; }

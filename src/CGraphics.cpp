@@ -58,7 +58,7 @@ IComponent* buildGraphics(rapidxml::xml_node<>* node, Actor* actor)
     }
 
     scene_node->setTransform(actor->getTransform());
-    scene_node->buildFromXML(node->first_node());
+    scene_node->fromXml(node->first_node());
 
     CGraphics* component = new CGraphics();
     component->m_node = scene_node;
@@ -74,7 +74,7 @@ IComponent* buildCamera(rapidxml::xml_node<>* node, Actor* actor)
     CameraSceneNode* scene_node = new CameraSceneNode();
 
     scene_node->setTransform(actor->getTransform());
-    scene_node->buildFromXML(node);
+    scene_node->fromXml(node);
 
     CCamera* component = new CCamera();
     component->m_node = scene_node;

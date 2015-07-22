@@ -1,7 +1,7 @@
 #ifndef PHYSICS_RENDERER_H
 #define PHYSICS_RENDERER_H
 
-#include <bullet/btBulletDynamicsCommon.h>
+#include <btBulletDynamicsCommon.h>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 

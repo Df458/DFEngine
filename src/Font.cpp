@@ -10,6 +10,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/vec2.hpp>
 #include <math.h>
+#ifdef WINDOWS
+#define M_PI 3.1415926
+#endif
 
 Font::Font(const char* filename, FT_Library lib)
 {

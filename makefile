@@ -1,11 +1,11 @@
 PKGCONFIG=pkg-config
 OS=GNU/Linux
-CXXFLAGS=-I../src -std=c++11 -O3 -pipe -g -pg -Wall -Wno-literal-suffix -Wno-unused-variable -pedantic-errors `$(PKGCONFIG) --cflags glew glfw3 freetype2 lua bullet openal`
-WINFLAGS=-Wl,-subsystem,windows -static-libgcc -static-libstdc++ -I/usr/i686-w64-mingw32/include/freetype2 -I/usr/i686-w64-mingw32/include/freetype2/freetype -DWINDOWS
+CXXFLAGS=-I../src -std=c++11 -O3 -pipe -g -pg -Wall -Wno-literal-suffix -Wno-unused-variable -pedantic-errors `$(PKGCONFIG) --static --cflags glew glfw3 freetype2 lua bullet openal`
+WINFLAGS=-Iinclude -Wl,-subsystem,windows -static-libgcc -static-libstdc++ -I/usr/i686-w64-mingw32/include/freetype2 -I/usr/i686-w64-mingw32/include/freetype2/freetype -DWINDOWS
 LINUXFLAGS=
 CPPLIBS=-L. -Wl,-rpath -Wl,./lib
 WINLIBS=`$(PKGCONFIG) --libs --static glew bullet openal gl glfw3 libpng zlib freetype2 lua`
-LINUXLIBS=`$(PKGCONFIG) --libs --static glew glfw3 freetype2 lua bullet openal libpng zlib`
+LINUXLIBS=-Wl,-Bstatic `$(PKGCONFIG) --libs --static zlib` -Wl,-Bdynamic `$(PKGCONFIG) --libs glew glfw3 lua freetype2 bullet openal libpng`
 SRCPATH=src/
 OBJPATH=obj/
 ENGINESRCS:=$(wildcard $(SRCPATH)*.cpp)
