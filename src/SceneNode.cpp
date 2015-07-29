@@ -220,7 +220,13 @@ void CameraSceneNode::buildFromXML(rapidxml::xml_node<>* node)
                     m_fov = glm::radians(atof(p_fov->value()));
                 m_projection = glm::perspective(m_fov, 4.0f / 3.0f, m_near, m_far);
             } else if(!strcmp(p_type->value(), "ortho")) {
-                m_projection = glm::ortho(0.0f, 800.0f, 600.0f, 0.0f, m_near, m_far);
+                float width = 1;
+                float height = 1;
+                if(xml_attribute<>* p_w = projection->first_attribute("width", 5, false))
+                    width = atof(p_w->value());
+                if(xml_attribute<>* p_h = projection->first_attribute("height", 6, false))
+                    height = atof(p_h->value());
+                m_projection = glm::ortho(0.0f, width, height, 0.0f, m_near, m_far);
                 m_ortho = true;
             } else {
                 warn("Invalid projection type specified.");
