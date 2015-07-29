@@ -4,8 +4,13 @@
 # Ignore object files
 obj
 
+# Ignore the include directory's contents(Should be filled by the developer as
+# needed)
+include/*
+
 # Ignore build-specific files
 DFEngine
+DFEngine.exe
 tags
 gmon.out
 perf.data

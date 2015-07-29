@@ -6,7 +6,7 @@
 #include "PhysicsSystem.h"
 #include "Util.h"
 
-#include <bullet/BulletCollision/CollisionShapes/btShapeHull.h>
+#include <BulletCollision/CollisionShapes/btShapeHull.h>
 #include <functional>
 
 using namespace std::placeholders;

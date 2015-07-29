@@ -6,7 +6,7 @@ extern "C" {
 #include <lualib.h>
 #include <lauxlib.h>
 }
-#include <bullet/btBulletDynamicsCommon.h>
+#include <btBulletDynamicsCommon.h>
 #include <string>
 
 typedef unsigned int ComponentID;

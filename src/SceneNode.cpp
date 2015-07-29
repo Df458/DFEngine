@@ -82,7 +82,7 @@ bool SceneNode::hasChild(ISceneNode* child) const
     return false;
 }
 
-void SceneNode::buildFromXML(rapidxml::xml_node<>* node)
+bool SceneNode::fromXml(rapidxml::xml_node<>* node)
 {
     if(xml_attribute<>* att = node->first_attribute("render", 6, false))
         m_renders = strcmp(att->value(), "false");
@@ -108,7 +108,7 @@ void SceneNode::buildFromXML(rapidxml::xml_node<>* node)
             rotation.z = atof(att->value());
         m_local_transform->rotate(rotation);
     }
-
+    return true;
 }
 
 void SceneNode::setParent(ISceneNode* parent)
@@ -143,7 +143,8 @@ long SceneNode::getActor(void) const
     return m_actor_id;
 }
 
-ModelSceneNode::ModelSceneNode(void) {
+ModelSceneNode::ModelSceneNode(void)
+{
     u_model = g_game->resources()->getModel("default");
     u_shader = g_game->resources()->getShader("default");
     u_texture = g_game->resources()->getTexture("default");
@@ -170,9 +171,9 @@ void ModelSceneNode::draw(IScene* scene, RenderPass pass)
     u_shader->postRender();
 }
 
-void ModelSceneNode::buildFromXML(rapidxml::xml_node<>* node)
+bool ModelSceneNode::fromXml(rapidxml::xml_node<>* node)
 {
-    SceneNode::buildFromXML(node);
+    SceneNode::fromXml(node);
     if(xml_attribute<>* model_att = node->first_attribute("mesh", 4, false))
         u_model = g_game->resources()->getModel(model_att->value());
 
@@ -180,6 +181,7 @@ void ModelSceneNode::buildFromXML(rapidxml::xml_node<>* node)
         u_shader = g_game->resources()->getShader(shader_att->value());
     if(xml_attribute<>* tex_att = node->first_attribute("texture", 7, false))
         u_texture = g_game->resources()->getTexture(tex_att->value());
+    return true;
 }
 
 bool ModelSceneNode::getVisible(void)
@@ -194,7 +196,7 @@ CameraSceneNode::CameraSceneNode() : SceneNode()
 
 CameraSceneNode::CameraSceneNode(xml_node<>* node)
 {
-    buildFromXML(node);
+    fromXml(node);
 }
 
 void CameraSceneNode::reProject(float width, float height)
@@ -205,7 +207,7 @@ void CameraSceneNode::reProject(float width, float height)
         m_projection = glm::ortho(0.0f, width, height, 0.0f, m_near, m_far);
 }
 
-void CameraSceneNode::buildFromXML(rapidxml::xml_node<>* node)
+bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
 {
     if(xml_node<>* projection = node->first_node("projection", 10, false)) {
         bool perspective = true;
@@ -280,6 +282,7 @@ void CameraSceneNode::buildFromXML(rapidxml::xml_node<>* node)
     if(xml_attribute<>* v_active = node->first_attribute("active", 6, false)) {
         m_active = strcmp(v_active->value(), "false");
     }
+    return true;
 }
 
 void CameraSceneNode::lookAt(glm::vec3 target)
@@ -461,9 +464,9 @@ void BillboardSceneNode::draw(IScene* scene, RenderPass pass)
     glDisableVertexAttribArray(m_vertex_position_attrib);
 }
 
-void BillboardSceneNode::buildFromXML(rapidxml::xml_node<>* node)
+bool BillboardSceneNode::fromXml(rapidxml::xml_node<>* node)
 {
-    SceneNode::buildFromXML(node);
+    SceneNode::fromXml(node);
 
     if(xml_attribute<>* tex_att = node->first_attribute("id", 2, false))
         u_texture = g_game->resources()->getTexture(tex_att->value());
@@ -481,6 +484,7 @@ void BillboardSceneNode::buildFromXML(rapidxml::xml_node<>* node)
         if(xml_attribute<>* a = ncolor->first_attribute("a", 1, false))
             m_color.w = atof(a->value());
     }
+    return true;
 }
 
 bool BillboardSceneNode::getVisible(void)
@@ -611,9 +615,9 @@ void ParticleSceneNode::draw(IScene* scene, RenderPass pass)
     glEnable(GL_DEPTH_TEST);
 }
 
-void ParticleSceneNode::buildFromXML(rapidxml::xml_node<>* node)
+bool ParticleSceneNode::fromXml(rapidxml::xml_node<>* node)
 {
-    UpdatingSceneNode::buildFromXML(node);
+    UpdatingSceneNode::fromXml(node);
 
     if(xml_attribute<>* tex_att = node->first_attribute("id", 2, false))
         u_texture = g_game->resources()->getTexture(tex_att->value());
@@ -638,6 +642,7 @@ void ParticleSceneNode::buildFromXML(rapidxml::xml_node<>* node)
         if(xml_attribute<>* a = ncolor->first_attribute("a", 1, false))
             m_starting_color.w = atof(a->value());
     }
+    return true;
 }
 
 void ParticleSceneNode::update(float delta_time)
@@ -729,14 +734,15 @@ void TextSceneNode::draw(IScene* scene, RenderPass pass)
     u_font->draw(scene, m_text.c_str(), m_final_transform);
 }
 
-void TextSceneNode::buildFromXML(rapidxml::xml_node<>* node)
+bool TextSceneNode::fromXml(rapidxml::xml_node<>* node)
 {
-    SceneNode::buildFromXML(node);
+    SceneNode::fromXml(node);
 
     if(xml_attribute<>* text_att = node->first_attribute("value", 5, false))
         m_text = text_att->value();
     if(xml_attribute<>* fn_att = node->first_attribute("font", 4, false))
         u_font = g_game->resources()->getFont(fn_att->value());
+    return true;
 }
 
 bool TextSceneNode::getVisible(void)
