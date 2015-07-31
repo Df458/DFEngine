@@ -2,7 +2,8 @@
 #define RENDER_UTIL
 #include <GL/glew.h>
 
-enum RenderPass {
+enum RenderPass
+{
     FIRST_PASS = 0,
     STATIC_PASS = FIRST_PASS,
     DYNAMIC_PASS,

@@ -9,7 +9,8 @@
 
 typedef std::pair<void*, std::function<void(const IEvent&)>> Callback;
 
-class IEventManager {
+class IEventManager
+{
 public:
     virtual ~IEventManager(void) = 0;
     virtual bool addSubscription(const Callback& subscription_callback, const EventType& type) = 0;
@@ -21,7 +22,8 @@ public:
 
 inline IEventManager::~IEventManager() {}
 
-class EventSystem : public IEventManager, public ISystem {
+class EventSystem : public IEventManager, public ISystem
+{
 public:
     EventSystem(void);
     virtual ~EventSystem(void);

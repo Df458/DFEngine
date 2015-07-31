@@ -6,7 +6,8 @@
 #include <glm/vec4.hpp>
 #include <vector>
 
-class IModel {
+class IModel
+{
 public:
     virtual ~IModel(void) = 0;
 
@@ -19,7 +20,8 @@ public:
 };
 inline IModel::~IModel(void) {}
 
-class Model : public IModel {
+class Model : public IModel
+{
 public:
     Model(char* model_data);
     Model(void);

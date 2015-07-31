@@ -6,7 +6,8 @@
 typedef glm::vec3 RGBColor;
 typedef glm::vec4 RGBAColor;
 
-namespace Color {
+namespace Color
+{
     static const RGBColor Red(1.0f, 0.0f, 0.0f);
     static const RGBColor Green(0.0f, 1.0f, 0.0f);
     static const RGBColor Blue(0.0f, 0.0f, 1.0f);
