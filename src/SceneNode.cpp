@@ -85,28 +85,21 @@ bool SceneNode::hasChild(ISceneNode* child) const
 
 bool SceneNode::fromXml(rapidxml::xml_node<>* node)
 {
-    if(xml_attribute<>* att = node->first_attribute("render", 6, false))
-        m_renders = strcmp(att->value(), "false");
+    attr(node, "renders", &m_renders);
 
     if(xml_node<>* tr = node->first_node("translate", 9, false)) {
         glm::vec3 translation(0, 0, 0);
-        if(xml_attribute<>* att = tr->first_attribute("x", 1, false))
-            translation.x = atof(att->value());
-        if(xml_attribute<>* att = tr->first_attribute("y", 1, false))
-            translation.y = atof(att->value());
-        if(xml_attribute<>* att = tr->first_attribute("z", 1, false))
-            translation.z = atof(att->value());
+        attr(tr, "x", &translation.x);
+        attr(tr, "y", &translation.y);
+        attr(tr, "z", &translation.z);
         m_local_transform->translate(translation);
     } 
 
     if(xml_node<>* tr = node->first_node("rotate", 6, false)) {
         glm::vec3 rotation(0, 0, 0);
-        if(xml_attribute<>* att = tr->first_attribute("x", 1, false))
-            rotation.x = atof(att->value());
-        if(xml_attribute<>* att = tr->first_attribute("y", 1, false))
-            rotation.y = atof(att->value());
-        if(xml_attribute<>* att = tr->first_attribute("z", 1, false))
-            rotation.z = atof(att->value());
+        attr(tr, "x", &rotation.x);
+        attr(tr, "y", &rotation.y);
+        attr(tr, "z", &rotation.z);
         m_local_transform->rotate(rotation);
     }
     return true;
@@ -212,23 +205,18 @@ bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
 {
     if(xml_node<>* projection = node->first_node("projection", 10, false)) {
         bool perspective = true;
-        if(xml_attribute<>* p_near = projection->first_attribute("near", 4, false))
-            m_near = atof(p_near->value());
-        if(xml_attribute<>* p_far = projection->first_attribute("far", 3, false))
-            m_far = atof(p_far->value());
+        attr(projection, "near", &m_near);
+        attr(projection, "far", &m_far);
         if(xml_attribute<>* p_type = projection->first_attribute("type", 4, false)) {
             if(!strcmp(p_type->value(), "perspective")) {
                 m_fov = glm::radians(90.0f);
-                if(xml_attribute<>* p_fov = projection->first_attribute("fov", 3, false))
-                    m_fov = glm::radians(atof(p_fov->value()));
+                attr(projection, "fov", &m_fov);
                 m_projection = glm::perspective(m_fov, 4.0f / 3.0f, m_near, m_far);
             } else if(!strcmp(p_type->value(), "ortho")) {
                 float width = 1;
                 float height = 1;
-                if(xml_attribute<>* p_w = projection->first_attribute("width", 5, false))
-                    width = atof(p_w->value());
-                if(xml_attribute<>* p_h = projection->first_attribute("height", 6, false))
-                    height = atof(p_h->value());
+                attr(projection, "width", &width);
+                attr(projection, "height", &height);
                 m_projection = glm::ortho(0.0f, width, height, 0.0f, m_near, m_far);
                 m_ortho = true;
             } else {
@@ -246,43 +234,32 @@ bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
 
     if(xml_node<>* v_rotate = node->first_node("rotate", 6, false)) {
         glm::vec3 rotation;
-        if(xml_attribute<>* vr_x = v_rotate->first_attribute("x", 1, false))
-            rotation.x = atof(vr_x->value());
-        if(xml_attribute<>* vr_y = v_rotate->first_attribute("y", 1, false))
-            rotation.y = atof(vr_y->value());
-        if(xml_attribute<>* vr_z = v_rotate->first_attribute("z", 1, false))
-            rotation.z = atof(vr_z->value());
+        attr(v_rotate, "x", &rotation.x);
+        attr(v_rotate, "y", &rotation.y);
+        attr(v_rotate, "z", &rotation.z);
         m_final_transform = glm::mat4_cast(glm::quat(rotation));
     }
 
     if(xml_node<>* v_translate = node->first_node("translate", 9, false)) {
         glm::vec3 translation;
-        if(xml_attribute<>* vt_x = v_translate->first_attribute("x", 1, false))
-            translation.x = atof(vt_x->value());
-        if(xml_attribute<>* vt_y = v_translate->first_attribute("y", 1, false))
-            translation.y = atof(vt_y->value());
-        if(xml_attribute<>* vt_z = v_translate->first_attribute("z", 1, false))
-            translation.z = atof(vt_z->value());
 
+        attr(v_translate, "x", &translation.x);
+        attr(v_translate, "y", &translation.y);
+        attr(v_translate, "z", &translation.z);
         glm::translate(m_final_transform, translation);
     }
 
     if(xml_node<>* v_lookat = node->first_node("lookat", 6, false)) {
         glm::vec3 target;
-        if(xml_attribute<>* lt_x = v_lookat->first_attribute("x", 1, false))
-            target.x = atof(lt_x->value());
-        if(xml_attribute<>* lt_y = v_lookat->first_attribute("y", 1, false))
-            target.y = atof(lt_y->value());
-        if(xml_attribute<>* lt_z = v_lookat->first_attribute("z", 1, false))
-            target.z = atof(lt_z->value());
+        attr(v_lookat, "x", &target.x);
+        attr(v_lookat, "y", &target.y);
+        attr(v_lookat, "z", &target.z);
         m_view = glm::lookAt(glm::vec3(m_final_transform[3]), target, glm::vec3(0.0f, 1.0f, 0.0f));
     } else {
         m_view = glm::inverse(m_final_transform);
     }
 
-    if(xml_attribute<>* v_active = node->first_attribute("active", 6, false)) {
-        m_active = strcmp(v_active->value(), "false");
-    }
+    attr(node, "active", &m_active);
     return true;
 }
 
@@ -300,22 +277,7 @@ LightSceneNode::LightSceneNode(void) : SceneNode()
 
 LightSceneNode::LightSceneNode(xml_node<>* node)
 {
-    if(xml_node<>* color = node->first_node("color", 5, false)) {
-        if(xml_attribute<>* r = color->first_attribute("r", 1, false))
-            m_color.x = atof(r->value());
-        if(xml_attribute<>* g = color->first_attribute("g", 1, false))
-            m_color.y = atof(g->value());
-        if(xml_attribute<>* b = color->first_attribute("b", 1, false))
-            m_color.z = atof(b->value());
-    }
-    if(xml_node<>* direction = node->first_node("direction", 9, false)) {
-        if(xml_attribute<>* x = direction->first_attribute("x", 1, false))
-            m_direction.x = atof(x->value());
-        if(xml_attribute<>* y = direction->first_attribute("y", 1, false))
-            m_direction.y = atof(y->value());
-        if(xml_attribute<>* z = direction->first_attribute("z", 1, false))
-            m_direction.z = atof(z->value());
-    }
+    fromXml(node);
 //:TODO: 20.02.15 20:32:50, df458
 // Add extra
     m_render_pass = LIGHTING_PASS;
@@ -358,6 +320,33 @@ void LightSceneNode::draw(IScene* scene, RenderPass pass)
     checkGLError();
 
     glDisableVertexAttribArray(m_vertex_attrib);
+}
+
+bool LightSceneNode::fromXml(rapidxml::xml_node<>* node)
+{
+    SceneNode::fromXml(node);
+
+    if(xml_node<>* color = node->first_node("color", 5, false)) {
+        attr(color, "r", &m_color.x);
+        attr(color, "g", &m_color.y);
+        attr(color, "b", &m_color.z);
+    }
+    if(xml_node<>* direction = node->first_node("direction", 9, false)) {
+        if(xml_attribute<>* x = direction->first_attribute("x", 1, false))
+            m_direction.x = atof(x->value());
+        if(xml_attribute<>* y = direction->first_attribute("y", 1, false))
+            m_direction.y = atof(y->value());
+        if(xml_attribute<>* z = direction->first_attribute("z", 1, false))
+            m_direction.z = atof(z->value());
+        attr(direction, "x", &m_direction.x);
+        attr(direction, "y", &m_direction.y);
+        attr(direction, "z", &m_direction.z);
+    }
+    attr(node, "strength", &m_strength);
+    attr(node, "affects_diffuse", &m_diffuse);
+    attr(node, "affects_specular", &m_specular);
+
+    return true;
 }
 
 bool LightSceneNode::getAffectsDiffuse(void) const
@@ -471,19 +460,13 @@ bool BillboardSceneNode::fromXml(rapidxml::xml_node<>* node)
 
     if(xml_attribute<>* tex_att = node->first_attribute("id", 2, false))
         u_texture = g_game->resources()->getTexture(tex_att->value());
-    if(xml_attribute<>* dw_att = node->first_attribute("width", 5, false))
-        m_dims.x = atof(dw_att->value());
-    if(xml_attribute<>* dh_att = node->first_attribute("height", 6, false))
-        m_dims.y = atof(dh_att->value());
+    attr(node, "width", &m_dims.x);
+    attr(node, "height", &m_dims.y);
     if(xml_node<>* ncolor = node->first_node("color", 5, false)) {
-        if(xml_attribute<>* r = ncolor->first_attribute("r", 1, false))
-            m_color.x = atof(r->value());
-        if(xml_attribute<>* g = ncolor->first_attribute("g", 1, false))
-            m_color.y = atof(g->value());
-        if(xml_attribute<>* b = ncolor->first_attribute("b", 1, false))
-            m_color.z = atof(b->value());
-        if(xml_attribute<>* a = ncolor->first_attribute("a", 1, false))
-            m_color.w = atof(a->value());
+        attr(ncolor, "r", &m_color.x);
+        attr(ncolor, "g", &m_color.y);
+        attr(ncolor, "b", &m_color.z);
+        attr(ncolor, "a", &m_color.w);
     }
     return true;
 }
@@ -622,26 +605,18 @@ bool ParticleSceneNode::fromXml(rapidxml::xml_node<>* node)
 
     if(xml_attribute<>* tex_att = node->first_attribute("id", 2, false))
         u_texture = g_game->resources()->getTexture(tex_att->value());
-    if(xml_attribute<>* dw_att = node->first_attribute("width", 5, false))
-        m_dims.x = atof(dw_att->value());
-    if(xml_attribute<>* dh_att = node->first_attribute("height", 6, false))
-        m_dims.y = atof(dh_att->value());
-    if(xml_attribute<>* rt_att = node->first_attribute("rate", 4, false))
-        m_rate = atof(rt_att->value());
-    if(xml_attribute<>* lf_att = node->first_attribute("life", 4, false))
-        m_starting_life = atof(lf_att->value());
-    if(xml_attribute<>* br_att = node->first_attribute("burst", 5, false))
-        m_burst = strcmp(br_att->value(), "false");
+    attr(node, "width", &m_dims.x);
+    attr(node, "height", &m_dims.y);
+    attr(node, "rate", &m_rate);
+    attr(node, "life", &m_starting_life);
+    attr(node, "burst", &m_burst);
+    attr(node, "spawning", &m_spawning);
     RGBAColor color(Color::White, 1.0f);
     if(xml_node<>* ncolor = node->first_node("color", 5, false)) {
-        if(xml_attribute<>* r = ncolor->first_attribute("r", 1, false))
-            m_starting_color.x = atof(r->value());
-        if(xml_attribute<>* g = ncolor->first_attribute("g", 1, false))
-            m_starting_color.y = atof(g->value());
-        if(xml_attribute<>* b = ncolor->first_attribute("b", 1, false))
-            m_starting_color.z = atof(b->value());
-        if(xml_attribute<>* a = ncolor->first_attribute("a", 1, false))
-            m_starting_color.w = atof(a->value());
+        attr(ncolor, "r", &m_starting_color.x);
+        attr(ncolor, "g", &m_starting_color.y);
+        attr(ncolor, "b", &m_starting_color.z);
+        attr(ncolor, "a", &m_starting_color.w);
     }
     return true;
 }

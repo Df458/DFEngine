@@ -19,14 +19,14 @@ ActorConstructionData::ActorConstructionData(void)
 
 ActorConstructionData::ActorConstructionData(xml_node<>* root_node)
 {
-    constructFromXml(root_node);
+    fromXml(root_node);
 }
 
 ActorConstructionData::~ActorConstructionData(void)
 {
 }
 
-bool ActorConstructionData::constructFromXml(xml_node<>* root_node)
+bool ActorConstructionData::fromXml(xml_node<>* root_node)
 {
     u_root_node = root_node;
     if(xml_attribute<>* type = u_root_node->first_attribute("id", 2, false)) {
@@ -35,38 +35,20 @@ bool ActorConstructionData::constructFromXml(xml_node<>* root_node)
     if(xml_attribute<>* name = u_root_node->first_attribute("name", 4, false)) {
         m_name = name->value();
     }
-    if(xml_attribute<>* st = u_root_node->first_attribute("static", 6, false)) {
-        m_static = strcmp(st->value(), "false");
-    }
-    if(xml_attribute<>* st = u_root_node->first_attribute("persistent", 10, false)) {
-        m_persistent = strcmp(st->value(), "false");
-    }
+    attr(u_root_node, "static", &m_static);
+    attr(u_root_node, "persistent", &m_persistent);
     if((u_translation_node = u_root_node->first_node("translate", 9, false))) {
-        float x = 0.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-        auto xa = u_translation_node->first_attribute("x", 1, false);
-        auto ya = u_translation_node->first_attribute("y", 1, false);
-        auto za = u_translation_node->first_attribute("z", 1, false);
-        if(xa)
-            x = atof(xa->value());
-        if(ya)
-            y = atof(ya->value());
-        if(za)
-            z = atof(za->value());
-        m_transform.translate(x, y, z, true);
+        glm::vec3 trans(0, 0, 0);
+        attr(u_translation_node, "x", &trans.x);
+        attr(u_translation_node, "y", &trans.y);
+        attr(u_translation_node, "z", &trans.z);
+        m_transform.translate(trans, true);
     }
     if((u_rotation_node = u_root_node->first_node("rotate", 6, false))) {
         glm::vec3 rot(0, 0, 0);
-        auto xa = u_rotation_node->first_attribute("x", 1, false);
-        auto ya = u_rotation_node->first_attribute("y", 1, false);
-        auto za = u_rotation_node->first_attribute("z", 1, false);
-        if(xa)
-            rot.x = atof(xa->value());
-        if(ya)
-            rot.y = atof(ya->value());
-        if(za)
-            rot.z = atof(za->value());
+        attr(u_rotation_node, "x", &rot.x);
+        attr(u_rotation_node, "y", &rot.y);
+        attr(u_rotation_node, "z", &rot.z);
         m_transform.rotate(rot, true);
     }
 
@@ -81,7 +63,7 @@ StaticActorConstructionData::StaticActorConstructionData(char* text_buffer)
     } catch(parse_error e) {
         printf("%s: %s\n", e.what(), e.where<char>());
     }
-    constructFromXml(m_document.first_node("actor", 5));
+    fromXml(m_document.first_node("actor", 5));
 }
 
 void ActorConstructionData::cleanup(void)

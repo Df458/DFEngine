@@ -23,7 +23,6 @@ public:
     virtual bool addChild(ISceneNode* child) = 0;
     virtual bool removeChild(ISceneNode* child) = 0;
     virtual bool hasChild(ISceneNode* child) const = 0;
-    //virtual bool fromXml(rapidxml::xml_node<>* node) = 0;
     virtual bool getVisible(void) const = 0;
     virtual bool getRenders(void) const = 0;
     virtual void setRenders(bool visible) = 0;
@@ -149,6 +148,7 @@ public:
     LightSceneNode(void);
     LightSceneNode(rapidxml::xml_node<>* node);
     virtual void draw(IScene* scene, RenderPass pass);
+    virtual bool fromXml(rapidxml::xml_node<>* node);
     bool  getAffectsDiffuse(void) const;
     bool  getAffectsSpecular(void) const;
     const RGBColor& getColor(void) const;

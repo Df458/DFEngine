@@ -4,8 +4,10 @@
 #include "ActorSystem.h"
 #include "Component.h"
 #include "Transform.h"
+#include "XmlSerializable.h"
 
-extern "C" {
+extern "C"
+{
 #include <lua.h>
 #include <lauxlib.h>
 }
@@ -61,7 +63,7 @@ protected:
     void _destroy(void);
 };
 
-class ActorConstructionData
+class ActorConstructionData : public IXmlSerializable
 {
 public:
     ActorConstructionData(void);
@@ -72,11 +74,11 @@ public:
     inline bool isPersistent(void) const { return m_persistent; }
     std::string getName(void) const { return m_name; }
     void setName(std::string name) { m_name = name; }
+    bool fromXml(rapidxml::xml_node<>* node);
 
     friend bool Actor::applyData(ActorConstructionData* data);
     friend bool Actor::applyTransform(ActorConstructionData* data, Transform* transform);
 protected:
-    virtual bool constructFromXml(rapidxml::xml_node<>* root_node);
     Transform m_transform;
     rapidxml::xml_node<>* u_root_node;
     rapidxml::xml_node<>* u_translation_node;
