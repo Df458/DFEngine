@@ -11,6 +11,8 @@ Level::Level(char* text_buffer)
     //printf("Level data:\n--%s--\n", m_text_buffer);
     m_document.parse<0>(m_text_buffer);
     xml_node<>* root_node = m_document.first_node();
+    if(xml_attribute<>* sa = root_node->first_attribute("world_scale", 11, false))
+        m_world_scale = atof(sa->value());
     if(xml_attribute<>* gxa = root_node->first_attribute("gravity.x", 9, false))
         m_gravity.x = atof(gxa->value());
     if(xml_attribute<>* gya = root_node->first_attribute("gravity.y", 9, false))

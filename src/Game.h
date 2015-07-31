@@ -4,7 +4,8 @@
 #include "Event.h"
 #include "System.h"
 #include <functional>
-extern "C" {
+extern "C"
+{
 #include <lua.h>
 #include <lauxlib.h>
 }
@@ -19,7 +20,8 @@ class InputSystem;
 class PhysicsSystem;
 class ResourceManager;
 
-class Game : public ISystem {
+class Game : public ISystem
+{
 public:
     Game(void);
     virtual bool initialize(void);
@@ -49,7 +51,8 @@ private:
     bool m_quit = false;
 };
 
-class DFBaseGame : public Game {
+class DFBaseGame : public Game
+{
 public:
     DFBaseGame(void);
     virtual bool initialize(void) final;

@@ -1,2 +1,20 @@
-<level gravity.y="-9.8">
+<level gravity.y="9.8" world_scale="0.05">
+    <actor static="true">
+        <translate z="-3"/>
+        <camera>
+            <projection type="ortho" width="80" height="60" near="0.1" far="100"/>
+            <lookat />
+        </camera>
+    </actor>
+
+    <actor>
+        <translate x="0" y="0"/>
+        <graphics>
+            <sprite id="test" width="10" height="10">
+            </sprite>
+        </graphics>
+        <rigidbody mass="1">
+            <shape type="box" x="1" y="1" z="1"/>
+        </rigidbody>
+    </actor>
 </level>

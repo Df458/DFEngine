@@ -2,6 +2,7 @@
 #include "Game.h"
 #include "ResourceManager.h"
 #include "Font.h"
+#include "PhysicsSystem.h"
 #include "Scene.h"
 #include "SceneNode.h"
 #include "Shader.h"
@@ -204,7 +205,7 @@ void CameraSceneNode::reProject(float width, float height)
     if(!m_ortho)
         m_projection = glm::perspective(m_fov, width / height, m_near, m_far);
     else
-        m_projection = glm::ortho(0.0f, width, height, 0.0f, m_near, m_far);
+        m_projection = glm::ortho(0.0f, width * g_game->physics()->getWorldScale(), height * g_game->physics()->getWorldScale(), 0.0f, m_near, m_far);
 }
 
 bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
