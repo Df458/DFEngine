@@ -3,7 +3,8 @@
 
 typedef unsigned int EventType;
 
-class IEvent {
+class IEvent
+{
 public:
     virtual ~IEvent(void) = 0;
     virtual const EventType& getEventType (void) const = 0;
@@ -11,7 +12,8 @@ public:
 
 inline IEvent::~IEvent() {}
 
-class ActorDestroyedEvent : public IEvent {
+class ActorDestroyedEvent : public IEvent
+{
     public:
         ActorDestroyedEvent(unsigned long id);
         virtual const EventType& getEventType (void) const;

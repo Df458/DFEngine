@@ -12,7 +12,8 @@ class Level;
 class InputSystem;
 class PhysicsRenderer;
 
-class IGraphics {
+class IGraphics
+{
 public:
     virtual ~IGraphics(void) = 0;
     virtual void render(void) const = 0;
@@ -23,7 +24,8 @@ public:
 
 inline IGraphics::~IGraphics() {}
 
-class GraphicsSystem : public IGraphics, public ISystem {
+class GraphicsSystem : public IGraphics, public ISystem
+{
 public:
     GraphicsSystem(void);
     virtual ~GraphicsSystem(void);
@@ -45,7 +47,8 @@ private:
     PhysicsRenderer* m_physics_debug = 0;
 };
 
-struct WindowData {
+struct WindowData
+{
     GraphicsSystem* gfx_data;
     InputSystem*    input_data;
 };

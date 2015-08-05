@@ -2,27 +2,33 @@
 #include "EventSystem.h"
 #include "Util.h"
 
-EventSystem::EventSystem(void) {
+EventSystem::EventSystem(void)
+{
 }
 
-EventSystem::~EventSystem(void) {
+EventSystem::~EventSystem(void)
+{
 }
 
-bool EventSystem::initialize(void) {
+bool EventSystem::initialize(void)
+{
     return true;
 }
 
-void EventSystem::update(void) {
+void EventSystem::update(void)
+{
     while(!m_event_queue.empty()) {
         callEvent(*m_event_queue.front());
         m_event_queue.pop_front();
     }
 }
 
-void EventSystem::cleanup(void) {
+void EventSystem::cleanup(void)
+{
 }
 
-bool EventSystem::addSubscription(const Callback& subscription_callback, const EventType& type) {
+bool EventSystem::addSubscription(const Callback& subscription_callback, const EventType& type)
+{
     std::list<Callback> list = m_subscriptions[type];
     for(auto i = list.begin(); i != list.end(); ++i) {
         if(subscription_callback.first == (*i).first) {
@@ -34,7 +40,8 @@ bool EventSystem::addSubscription(const Callback& subscription_callback, const E
     return true;
 }
 
-bool EventSystem::rmSubscription(void* subscriber, const EventType& type) {
+bool EventSystem::rmSubscription(void* subscriber, const EventType& type)
+{
     std::list<Callback> list = m_subscriptions[type];
     for(auto i = list.begin(); i != list.end(); ++i) {
         if(subscriber == (*i).first) {
@@ -47,7 +54,8 @@ bool EventSystem::rmSubscription(void* subscriber, const EventType& type) {
     return false;
 }
 
-bool EventSystem::callEvent(const IEvent& event) const {
+bool EventSystem::callEvent(const IEvent& event) const
+{
     std::list<Callback> list;
     try {
         list = m_subscriptions.at(event.getEventType());
@@ -62,12 +70,14 @@ bool EventSystem::callEvent(const IEvent& event) const {
     return called;
 }
 
-bool EventSystem::queueEvent(IEvent* event) {
+bool EventSystem::queueEvent(IEvent* event)
+{
     m_event_queue.push_back(event);
     return true;
 }
 
-bool EventSystem::clearEvent(const EventType& type, bool next_only) {
+bool EventSystem::clearEvent(const EventType& type, bool next_only)
+{
 //:TODO: 27.12.14 13:02:50, df458
 // implement this
     error("Function clearEvent is unimplemented.");
