@@ -6,6 +6,7 @@
 #include <btBulletDynamicsCommon.h>
 #include <BulletCollision/Gimpact/btGImpactCollisionAlgorithm.h>
 #include <glm/vec3.hpp>
+#include <map>
 
 class Actor;
 class IEvent;

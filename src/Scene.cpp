@@ -1,6 +1,7 @@
 #include "CGraphics.h"
 #include "Event.h"
 #include "Game.h"
+#include "PhysicsSystem.h"
 #include "ResourceManager.h"
 #include "Scene.h"
 #include "SceneNode.h"
@@ -189,6 +190,13 @@ void Scene::render(void)
             m_root_node->drawChildren(this, static_cast<RenderPass>(pass));
         }
     }
+}
+
+float Scene::getDPU(void) const
+{
+    if(m_active_camera->getOrtho())
+        return g_game->physics()->getWorldScale();
+    return m_dpu;
 }
 
 glm::mat4 const Scene::getActiveProjectionMatrix(void) const

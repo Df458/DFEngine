@@ -40,6 +40,7 @@ public:
     virtual void updateViewportSize(int width, int height) = 0;
     virtual glm::vec2 getViewportSize(void) const = 0;
     virtual GLuint getLightTexture(int id) const = 0;
+    virtual float getDPU(void) const = 0;
     
     virtual void CGraphicsCreatedCallback(const IEvent& event) = 0;
     virtual void actorRemovedCallback(const IEvent& event) = 0;
@@ -69,6 +70,7 @@ public:
     virtual void updateViewportSize(int width, int height);
     virtual glm::vec2 getViewportSize(void) const { return m_view_dims; }
     virtual GLuint getLightTexture(int id) const { return m_light_textures[id]; }
+    virtual float getDPU(void) const;
 
     virtual void CGraphicsCreatedCallback(const IEvent& event);
     virtual void actorRemovedCallback(const IEvent& event);
@@ -93,6 +95,8 @@ private:
     GLuint m_color_t_uniform = 0;
     GLuint m_diffuse_t_uniform = 0;
     GLuint m_specular_t_uniform = 0;
+
+    float m_dpu = 100;
 };
 
 #endif

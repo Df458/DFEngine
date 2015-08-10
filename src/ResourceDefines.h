@@ -52,7 +52,7 @@ static const char* SPRITE_VERTEX_SHADER[] =
 "uniform mat4 model_view_projection;\n"
 "void main() {\n"
 "uv = (vertex_pos.xy - vec2(0.5, 0.5)) + 1;\n"// TODO: Might just want to add uvs to the buffer, it's likely cheaper in the long run
-"vec3 wvp = position + right * vertex_pos.x * dims.x + up * vertex_pos.y * dims.y;\n"
+"vec3 wvp = right * vertex_pos.x * dims.x + up * vertex_pos.y * dims.y;\n"
 "gl_Position = model_view_projection * vec4(wvp, 1.0);\n"
 "}"};
 static const char* SPRITE_FRAGMENT_SHADER[] =

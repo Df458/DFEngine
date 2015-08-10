@@ -16,6 +16,14 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
 {
     xml_node<>* shape_node = node->first_node("shape", 5, false);
     xml_node<>* mat_node = node->first_node("material", 8, false);
+    xml_node<>* lfac_node = node->first_node("linear_factor", 13, false);
+    xml_node<>* afac_node = node->first_node("angular_factor", 14, false);
+    xml_node<>* lvel_node = node->first_node("linear_velocity", 15, false);
+    xml_node<>* avel_node = node->first_node("angular_velocity", 16, false);
+    btVector3 linear_fac(1, 1, 1);
+    btVector3 angular_fac(1, 1, 1);
+    btVector3 linear_vel(0, 0, 0);
+    btVector3 angular_vel(0, 0, 0);
     PhysicsMaterial mat;
     xml_attribute<>* shape_id = NULL;
     btCollisionShape* shape = NULL;
@@ -69,6 +77,38 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     if(mat_node)
         if(xml_attribute<>* id = mat_node->first_attribute("id", 2, false))
             mat = g_game->resources()->getPhysicsMaterial(id->value());
+    if(lfac_node) {
+        if(xml_attribute<>* at = lfac_node->first_attribute("x", 1, false))
+            linear_fac.setX(atof(at->value()));
+        if(xml_attribute<>* at = lfac_node->first_attribute("y", 1, false))
+            linear_fac.setY(atof(at->value()));
+        if(xml_attribute<>* at = lfac_node->first_attribute("z", 1, false))
+            linear_fac.setZ(atof(at->value()));
+    }
+    if(afac_node) {
+        if(xml_attribute<>* at = afac_node->first_attribute("x", 1, false))
+            angular_fac.setX(atof(at->value()));
+        if(xml_attribute<>* at = afac_node->first_attribute("y", 1, false))
+            angular_fac.setY(atof(at->value()));
+        if(xml_attribute<>* at = afac_node->first_attribute("z", 1, false))
+            angular_fac.setZ(atof(at->value()));
+    }
+    if(lvel_node) {
+        if(xml_attribute<>* at = lvel_node->first_attribute("x", 1, false))
+            linear_vel.setX(atof(at->value()));
+        if(xml_attribute<>* at = lvel_node->first_attribute("y", 1, false))
+            linear_vel.setY(atof(at->value()));
+        if(xml_attribute<>* at = lvel_node->first_attribute("z", 1, false))
+            linear_vel.setZ(atof(at->value()));
+    }
+    if(avel_node) {
+        if(xml_attribute<>* at = avel_node->first_attribute("x", 1, false))
+            angular_vel.setX(atof(at->value()));
+        if(xml_attribute<>* at = avel_node->first_attribute("y", 1, false))
+            angular_vel.setY(atof(at->value()));
+        if(xml_attribute<>* at = avel_node->first_attribute("z", 1, false))
+            angular_vel.setZ(atof(at->value()));
+    }
 
     float mass = 0;
     if(xml_attribute<>* ma = node->first_attribute("mass", 4, false))
@@ -80,6 +120,10 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     cinfo.m_friction = mat.sliding_friction;
     cinfo.m_rollingFriction = mat.rolling_friction;
     rigid_body = new btRigidBody(cinfo);
+    rigid_body->setLinearFactor(linear_fac);
+    rigid_body->setAngularFactor(angular_fac);
+    rigid_body->setLinearVelocity(linear_vel);
+    rigid_body->setAngularVelocity(angular_vel);
 
     CRigidBody* component = new CRigidBody();
     component->m_body = rigid_body;

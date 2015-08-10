@@ -3,7 +3,8 @@
 #include "Shader.h"
 #include "Util.h"
 
-BasicShader::BasicShader(GLuint program) {
+BasicShader::BasicShader(GLuint program)
+{
     m_program = program;
     m_vertex_position_attrib = glGetAttribLocation(m_program, "vertex_pos");
     m_vertex_uv_attrib = glGetAttribLocation(m_program, "vertex_uv");
@@ -15,14 +16,17 @@ BasicShader::BasicShader(GLuint program) {
     checkGLError();
 }
 
-BasicShader::~BasicShader(void) {
+BasicShader::~BasicShader(void)
+{
 }
 
-void BasicShader::cleanup(void) {
+void BasicShader::cleanup(void)
+{
     glDeleteProgram(m_program);
 }
 
-void BasicShader::prepareForRender(IScene* scene, IModel* model, glm::mat4 world_matrix, GLuint texture) {
+void BasicShader::prepareForRender(IScene* scene, IModel* model, glm::mat4 world_matrix, Texture* texture)
+{
     glUseProgram(m_program);
     checkGLError();
 
@@ -53,12 +57,13 @@ void BasicShader::prepareForRender(IScene* scene, IModel* model, glm::mat4 world
     if(!texture)
         glBindTexture(GL_TEXTURE_2D, BLANK_TEXTURE);
     else
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, texture->texture_handle);
     glUniform1i(m_texture_uniform, 0);
     checkGLError();
 }
 
-void BasicShader::postRender(void) {
+void BasicShader::postRender(void)
+{
     glDisableVertexAttribArray(m_vertex_position_attrib);
     glDisableVertexAttribArray(m_vertex_normal_attrib);
     glDisableVertexAttribArray(m_vertex_uv_attrib);

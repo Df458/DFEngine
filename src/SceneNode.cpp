@@ -9,6 +9,7 @@
 #include "Util.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/norm.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <algorithm>
 
 using namespace rapidxml;
@@ -144,7 +145,7 @@ ModelSceneNode::ModelSceneNode(void)
     u_texture = g_game->resources()->getTexture("default");
 }
 
-ModelSceneNode::ModelSceneNode(IModel* model, IShader* shader, GLuint texture, RenderPass pass) : SceneNode()
+ModelSceneNode::ModelSceneNode(IModel* model, IShader* shader, Texture* texture, RenderPass pass) : SceneNode()
 {
     u_model = model;
     u_shader = shader;
@@ -403,7 +404,7 @@ BillboardSceneNode::BillboardSceneNode()
     checkGLError();
 }
 
-BillboardSceneNode::BillboardSceneNode(GLuint texture, glm::vec2 dims, RGBAColor color, RenderPass pass) : SceneNode()
+BillboardSceneNode::BillboardSceneNode(Texture* texture, RGBAColor color, RenderPass pass) : SceneNode()
 {
     m_render_pass = pass;
     u_texture = texture;
@@ -416,8 +417,6 @@ BillboardSceneNode::BillboardSceneNode(GLuint texture, glm::vec2 dims, RGBAColor
     m_right_uniform = glGetUniformLocation(SPRITE_PROGRAM, "right");
     m_dims_uniform = glGetUniformLocation(SPRITE_PROGRAM, "dims");
     checkGLError();
-
-    m_dims = dims;
     m_color = color;
 }
 
@@ -431,13 +430,20 @@ void BillboardSceneNode::draw(IScene* scene, RenderPass pass)
     checkGLError();
 
     glm::mat4 view = scene->getActiveViewMatrix();
-    glm::mat4 transform_matrix = scene->getActiveProjectionMatrix() * view /* scene->getMatrix() * m_final_transform*/;
+    glm::mat4 world = scene->getMatrix() * m_final_transform;
+    glm::vec3 pos;
+    glm::vec3 scale;
+    glm::quat rot;
+    glm::vec3 skew;
+    glm::vec4 persp;
+    glm::decompose(world, scale, rot, pos, skew, persp);
+    glm::mat4 transform_matrix = scene->getActiveProjectionMatrix() * view * glm::translate(glm::mat4(1), pos) * glm::mat4_cast(glm::quat(glm::vec3(0.0f, 0.0f, -glm::roll(rot)))) * glm::scale(glm::mat4(1), scale);
     glUniformMatrix4fv(m_transform_uniform, 1, GL_FALSE, &transform_matrix[0][0]);
     glUniform3f(m_up_uniform, view[0][1], view[1][1], view[2][1]);
     checkGLError();
     glUniform3f(m_right_uniform, view[0][0], view[1][0], view[2][0]);
-    glUniform3f(m_position_uniform, m_final_transform[3][0], m_final_transform[3][1], m_final_transform[3][2]);
-    glUniform2f(m_dims_uniform, m_dims.x, m_dims.y);
+    glUniform3f(m_position_uniform, pos.x, pos.y, pos.z);
+    glUniform2f(m_dims_uniform, (float)u_texture->texture_width * scene->getDPU(), (float)u_texture->texture_height * scene->getDPU());
     glUniform4f(m_color_uniform, m_color.x, m_color.y, m_color.z, m_color.w);
     glEnableVertexAttribArray(m_vertex_position_attrib);
     glBindBuffer(GL_ARRAY_BUFFER, QUAD_BUFFER);
@@ -445,7 +451,7 @@ void BillboardSceneNode::draw(IScene* scene, RenderPass pass)
     checkGLError();
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, u_texture);
+    glBindTexture(GL_TEXTURE_2D, u_texture->texture_handle);
     glUniform1i(m_texture_uniform, 0);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -460,8 +466,6 @@ bool BillboardSceneNode::fromXml(rapidxml::xml_node<>* node)
 
     if(xml_attribute<>* tex_att = node->first_attribute("id", 2, false))
         u_texture = g_game->resources()->getTexture(tex_att->value());
-    attr(node, "width", &m_dims.x);
-    attr(node, "height", &m_dims.y);
     if(xml_node<>* ncolor = node->first_node("color", 5, false)) {
         attr(ncolor, "r", &m_color.x);
         attr(ncolor, "g", &m_color.y);
@@ -501,7 +505,7 @@ ParticleSceneNode::ParticleSceneNode()
     checkGLError();
 }
 
-ParticleSceneNode::ParticleSceneNode(GLuint texture, RGBAColor color, float rate, float life, glm::vec2 dims, bool burst, RenderPass pass) : UpdatingSceneNode()
+ParticleSceneNode::ParticleSceneNode(Texture* texture, RGBAColor color, float rate, float life, glm::vec2 dims, bool burst, RenderPass pass) : UpdatingSceneNode()
 {
     u_funcs = node_particle_funcs;
 
@@ -578,7 +582,7 @@ void ParticleSceneNode::draw(IScene* scene, RenderPass pass)
     checkGLError();
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, u_texture);
+    glBindTexture(GL_TEXTURE_2D, u_texture->texture_handle);
     glUniform1i(m_texture_uniform, 0);
     checkGLError();
 

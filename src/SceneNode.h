@@ -110,14 +110,14 @@ class ModelSceneNode : public SceneNode
 {
 public:
     ModelSceneNode(void);
-    ModelSceneNode(IModel* model, IShader* shader, GLuint texture = 0, RenderPass pass = RenderPass::DYNAMIC_PASS);
+    ModelSceneNode(IModel* model, IShader* shader, Texture* texture = 0, RenderPass pass = RenderPass::DYNAMIC_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool getVisible(void);
     virtual bool fromXml(rapidxml::xml_node<>* node);
 protected:
     IModel* u_model = nullptr;
     IShader* u_shader = nullptr;
-    GLuint u_texture = 0;
+    Texture* u_texture = 0;
 };
 
 class CameraSceneNode : public SceneNode
@@ -132,6 +132,7 @@ public:
     void lookAt(glm::vec3 target);
     void setActive(bool active) { m_active = active; }
     bool getActive(void) { return m_active; }
+    bool getOrtho(void) const { return m_ortho; }
 private:
     glm::mat4 m_view;
     glm::mat4 m_projection;
@@ -177,7 +178,7 @@ class BillboardSceneNode : public SceneNode
 {
 public:
     BillboardSceneNode();
-    BillboardSceneNode(GLuint texture, glm::vec2 dims = {1, 1}, RGBAColor color = RGBAColor(Color::White, 1.0f), RenderPass pass = RenderPass::UI_PASS);
+    BillboardSceneNode(Texture* texture, RGBAColor color = RGBAColor(Color::White, 1.0f), RenderPass pass = RenderPass::UI_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool fromXml(rapidxml::xml_node<>* node);
     void setColor(RGBAColor color) { m_color = color; }
@@ -194,9 +195,8 @@ protected:
     GLuint m_dims_uniform = 0;
     GLuint m_position_uniform = 0;
 
-    glm::vec2 m_dims;
     RGBAColor m_color = RGBAColor(Color::White, 1.0f);
-    GLuint u_texture = 0;
+    Texture* u_texture = 0;
 };
 
 struct Particle
@@ -214,7 +214,7 @@ class ParticleSceneNode : public UpdatingSceneNode
 {
 public:
     ParticleSceneNode();
-    ParticleSceneNode(GLuint texture, RGBAColor color, float rate, float life = 4, glm::vec2 dims = {1, 1}, bool burst = false, RenderPass pass = RenderPass::UI_PASS);
+    ParticleSceneNode(Texture* texture, RGBAColor color, float rate, float life = 4, glm::vec2 dims = {1, 1}, bool burst = false, RenderPass pass = RenderPass::UI_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool fromXml(rapidxml::xml_node<>* node);
     virtual bool getVisible(void);
@@ -237,7 +237,7 @@ protected:
     GLuint m_particle_buffer = 0;
     GLuint m_particle_buffer_p = 0;
     GLuint m_particle_buffer_c = 0;
-    GLuint u_texture = 0;
+    Texture* u_texture = 0;
     Particle m_particles[MAX_PARTICLES];
     Particle m_particle_template;
     glm::vec3 m_particle_pos[MAX_PARTICLES];

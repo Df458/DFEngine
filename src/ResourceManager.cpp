@@ -357,12 +357,12 @@ Material* DFBaseResourceManager::getShaderMaterial(std::string id)
     return search->second;
 }
 
-GLuint DFBaseResourceManager::getTexture(std::string id)
+Texture* DFBaseResourceManager::getTexture(std::string id)
 {
     id = TEXTURE_DATA_PATH + id + TEXTURE_SUFFIX;
     auto search = m_textures.find(id);
     if(search == m_textures.end()) {
-        GLuint load_result = _loadTexture(id);
+        Texture* load_result = _loadTexture(id);
         if(!load_result) {
             error("Trying to load a texture that doesn't exist.");
             return 0;
@@ -441,7 +441,7 @@ bool DFBaseResourceManager::loadPhysicsMaterial(std::string id)
 
 bool DFBaseResourceManager::loadProgram(std::string id)
 {
-    GLuint data = _loadTexture(SHADER_DATA_PATH + id);
+    GLuint data = _loadProgram(SHADER_DATA_PATH + id);
     if(!data) {
         warn("Trying to load a shader program that doesn't exist.");
         return false;
@@ -481,7 +481,7 @@ bool DFBaseResourceManager::loadShaderMaterial(std::string id)
 
 bool DFBaseResourceManager::loadTexture(std::string id)
 {
-    GLuint data = _loadTexture(TEXTURE_DATA_PATH + id +TEXTURE_SUFFIX);
+    Texture* data = _loadTexture(TEXTURE_DATA_PATH + id +TEXTURE_SUFFIX);
     if(!data) {
         warn("Trying to load a texture that doesn't exist.");
         return false;
@@ -767,15 +767,15 @@ char* DFBaseResourceManager::_loadScript(std::string id)
     return script;
 }
 
-GLuint DFBaseResourceManager::_loadTexture(std::string id)
+Texture* DFBaseResourceManager::_loadTexture(std::string id)
 {
     if(m_textures.find(id) != m_textures.end()) {
         warn("Trying to load a texture that already exists.");
         return m_textures[id];
     }
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	Texture* texture = new Texture();
+	glGenTextures(1, &texture->texture_handle);
+	glBindTexture(GL_TEXTURE_2D, texture->texture_handle);
 	
 	FILE* infile = fopen(id.c_str(), "rb");
 	if(!infile) {
@@ -786,7 +786,6 @@ GLuint DFBaseResourceManager::_loadTexture(std::string id)
 	uint8_t header[8];
 	png_structp pstruct;
 	png_infop info_struct;
-	uint16_t width, height;
 	png_byte* image_data;
 	png_bytep* row_ptrs;
 	
@@ -814,8 +813,8 @@ GLuint DFBaseResourceManager::_loadTexture(std::string id)
 	png_set_sig_bytes(pstruct, 8);
 	png_read_info(pstruct, info_struct);
 	
-	width = png_get_image_width(pstruct, info_struct);
-	height = png_get_image_height(pstruct, info_struct);
+	texture->texture_width = png_get_image_width(pstruct, info_struct);
+	texture->texture_height = png_get_image_height(pstruct, info_struct);
     png_byte color_type = png_get_color_type(pstruct, info_struct);
     png_byte bit_depth = png_get_bit_depth(pstruct, info_struct);
     int number_of_passes = png_set_interlace_handling(pstruct);
@@ -833,10 +832,10 @@ GLuint DFBaseResourceManager::_loadTexture(std::string id)
 	int rowbytes = png_get_rowbytes(pstruct, info_struct);
 	//rowbytes += 3 - ((rowbytes-1) % 4);
 	
-	image_data = (png_byte*)malloc(rowbytes * height /** sizeof(png_byte)+15*/);
-	row_ptrs = (png_bytep*)malloc(sizeof(png_bytep) * height);
-	for(int i = 0; i < height; i++){
-		row_ptrs[height - 1 - i] = image_data + i * rowbytes;
+	image_data = (png_byte*)malloc(rowbytes * texture->texture_height /** sizeof(png_byte)+15*/);
+	row_ptrs = (png_bytep*)malloc(sizeof(png_bytep) * texture->texture_height);
+	for(unsigned i = 0; i < texture->texture_height; i++){
+		row_ptrs[texture->texture_height - 1 - i] = image_data + i * rowbytes;
 	}
 	
 	png_read_image(pstruct, row_ptrs);
@@ -846,7 +845,7 @@ GLuint DFBaseResourceManager::_loadTexture(std::string id)
 		std::cerr << "Added Alpha channel\n";
 	}*/
 	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->texture_width, texture->texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);

@@ -27,4 +27,10 @@ extern GLuint TEXT_PROGRAM;
 extern GLuint QUAD_BUFFER;
 extern GLuint BLANK_TEXTURE;
 
+struct Texture {
+    GLuint texture_handle = 0;
+    unsigned texture_width = 0;
+    unsigned texture_height = 0;
+};
+
 #endif
