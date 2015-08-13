@@ -15,6 +15,8 @@ IComponent* buildGraphics(rapidxml::xml_node<>* node, Actor* actor);
 IComponent* buildCamera(rapidxml::xml_node<>* node, Actor* actor);
 
 int ccamera_lookat(lua_State* state);
+int ccamera_Index(lua_State* state);
+int ccamera_NewIndex(lua_State* state);
 int cgraphics_Index(lua_State* state);
 int cgraphics_NewIndex(lua_State* state);
 
@@ -26,6 +28,8 @@ const luaL_Reg ccamera_funcs[] =
 
 const luaL_Reg ccamera_meta[] =
 {
+    {"__index", ccamera_Index},
+    {"__newindex", ccamera_NewIndex},
     {0, 0}
 };
 
@@ -56,12 +60,14 @@ protected:
 
 class CCamera : public IComponent
 {
+public:
     virtual void init(void);
     virtual void destroy(void);
     virtual void update(float delta_time);
     virtual ComponentID getID(void);
     virtual const luaL_Reg* getFuncs(void) const { return ccamera_funcs; }
     virtual const luaL_Reg* getMetaFuncs(void) const { return ccamera_meta; }
+    virtual const luaL_Reg* getAttrFuncs(void) const { return m_node->getAttrFuncs(); }
 
     friend IComponent* buildCamera(rapidxml::xml_node<>* node, Actor* actor);
     friend int ccamera_lookat(lua_State* state);

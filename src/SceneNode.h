@@ -44,6 +44,8 @@ int model_model(lua_State* state);
 int model_shader(lua_State* state);
 int model_texture(lua_State* state);
 
+int camera_sky(lua_State* state);
+
 int billboard_color(lua_State* state);
 int billboard_texture(lua_State* state);
 
@@ -60,6 +62,12 @@ const luaL_Reg node_default_funcs[] =
 const luaL_Reg node_default_attr[] =
 {
     {"render", node_render},
+    {0, 0}
+};
+
+const luaL_Reg node_camera_attr[] =
+{
+    {"sky_color", camera_sky},
     {0, 0}
 };
 
@@ -173,6 +181,8 @@ public:
     void setActive(bool active) { m_active = active; }
     bool getActive(void) { return m_active; }
     bool getOrtho(void) const { return m_ortho; }
+    void setSkyColor(RGBColor color) { m_sky_color = color; }
+    virtual const RGBColor& getSkyColor(void) const { return m_sky_color; }
 private:
     glm::mat4 m_view;
     glm::mat4 m_projection;
@@ -181,6 +191,7 @@ private:
     float m_near = 0.1;
     float m_far = 1000;
     bool m_active = false;
+    RGBColor m_sky_color;
 };
 
 class LightSceneNode : public SceneNode

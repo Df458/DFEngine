@@ -189,10 +189,12 @@ bool ModelSceneNode::getVisible(void)
 
 CameraSceneNode::CameraSceneNode() : SceneNode()
 {
+    u_attr_funcs = node_camera_attr;
 }
 
 CameraSceneNode::CameraSceneNode(xml_node<>* node)
 {
+    u_attr_funcs = node_camera_attr;
     fromXml(node);
 }
 
@@ -260,6 +262,14 @@ bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
         m_view = glm::lookAt(glm::vec3(m_final_transform[3]), target, glm::vec3(0.0f, 1.0f, 0.0f));
     } else {
         m_view = glm::inverse(m_final_transform);
+    }
+
+    if(xml_node<>* v_lookat = node->first_node("sky_color", 9, false)) {
+        RGBColor color;
+        attr(v_lookat, "r", &color.x);
+        attr(v_lookat, "g", &color.y);
+        attr(v_lookat, "b", &color.z);
+        m_sky_color = color;
     }
 
     attr(node, "active", &m_active);
@@ -800,6 +810,40 @@ int model_texture(lua_State* state)
     return 1;
 }
 
+int camera_sky(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access render state, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    CameraSceneNode* node = (CameraSceneNode*)gfx->getNode();
+    RGBColor color;
+    if(lua_gettop(state) > 1) {
+        lua_getfield(state, 2, "r");
+        color.x = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "g");
+        color.y = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "b");
+        color.z = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        node->setSkyColor(color);
+        return 0;
+    }
+    color = node->getSkyColor();
+    lua_newtable(state);
+    lua_pushnumber(state, color.x);
+    lua_setfield(state, -2, "r");
+    lua_pushnumber(state, color.y);
+    lua_setfield(state, -2, "g");
+    lua_pushnumber(state, color.z);
+    lua_setfield(state, -2, "b");
+    return 1;
+}
+
 int billboard_texture(lua_State* state)
 {
     lua_getfield(state, 1, "instance");
@@ -844,7 +888,6 @@ int billboard_color(lua_State* state)
         return 0;
     }
     color = node->getColor();
-    lua_pushstring(state, node->getTexture()->name.c_str());
     lua_newtable(state);
     lua_pushnumber(state, color.x);
     lua_setfield(state, -2, "r");

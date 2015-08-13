@@ -126,6 +126,8 @@ void Scene::render(void)
     glDrawBuffers(2, lbuf);
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0.4, 0.4, 0.4, 1);
+    if(m_active_camera)
+        glClearColor(m_active_camera->getSkyColor().x, m_active_camera->getSkyColor().y, m_active_camera->getSkyColor().z, 1);
     glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
