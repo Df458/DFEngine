@@ -84,8 +84,12 @@ Actor::Actor(unsigned long id)
 
 void Actor::initialize(void)
 {
-    for(auto i : m_components)
+    for(auto i : m_components) {
         i->init();
+        if(i->getID() == CRIGIDBODY_ID) {
+            m_transform->setWorldTransform(((CRigidBody*) i)->getTransform());
+        }
+    }
 }
 
 bool Actor::applyTransform(ActorConstructionData* data, Transform* transform)
@@ -103,6 +107,7 @@ bool Actor::applyTransform(ActorConstructionData* data, Transform* transform)
     (*m_transform) *= data->m_transform;
     if(transform)
         (*m_transform) *= *transform;
+
     return true;
 }
 
@@ -359,6 +364,9 @@ int actor_get_component(lua_State* state)
     IComponent** cmpdat = static_cast<IComponent**>(lua_newuserdata(state, sizeof(IComponent*)));
     *cmpdat = it->second;
     lua_setfield(state, -2, "instance");
+    lua_newtable(state);
+    luaL_setfuncs(state, it->second->getMetaFuncs(), 0);
+    lua_setmetatable(state, -2);
 
     return 1;
 }

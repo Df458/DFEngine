@@ -38,6 +38,7 @@ public:
     virtual void popMatrix(void) = 0;
     virtual glm::mat4 getMatrix(void) const = 0;
     virtual void updateViewportSize(int width, int height) = 0;
+    virtual void updateViewportSize() = 0;
     virtual glm::vec2 getViewportSize(void) const = 0;
     virtual GLuint getLightTexture(int id) const = 0;
     virtual float getDPU(void) const = 0;
@@ -68,6 +69,7 @@ public:
     virtual void popMatrix(void);
     virtual glm::mat4 getMatrix(void) const;
     virtual void updateViewportSize(int width, int height);
+    virtual void updateViewportSize();
     virtual glm::vec2 getViewportSize(void) const { return m_view_dims; }
     virtual GLuint getLightTexture(int id) const { return m_light_textures[id]; }
     virtual float getDPU(void) const;

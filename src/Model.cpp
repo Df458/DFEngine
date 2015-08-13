@@ -5,8 +5,10 @@
 #include <cstring>
 #include <glm/vec2.hpp>
 
-Model::Model(char* model_data)
+Model::Model(char* model_data, std::string name)
 {
+    m_name = name;
+
     std::vector<glm::vec3> temp_vertex_data;
     std::vector<unsigned int> temp_index_data;
     std::vector<glm::vec3> temp_normal_data;

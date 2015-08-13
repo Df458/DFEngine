@@ -160,3 +160,41 @@ int ccamera_lookat(lua_State* state)
         return 0; // TODO: Error here
     return 0;
 }
+
+int cgraphics_Index(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "The Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    const luaL_Reg* funcs = gfx->getAttrFuncs();
+    for(unsigned i = 0; funcs[i].name != 0; ++i) {
+        if(!strcmp(lua_tostring(state, 2), funcs[i].name)) {
+            lua_settop(state, 1);
+            return funcs[i].func(state);
+        }
+    }
+
+    return 0;
+}
+
+int cgraphics_NewIndex(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "The Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    const luaL_Reg* funcs = gfx->getAttrFuncs();
+    for(unsigned i = 0; funcs[i].name != 0; ++i) {
+        if(!strcmp(lua_tostring(state, 2), funcs[i].name)) {
+            lua_replace(state, 2);
+            return funcs[i].func(state);
+        }
+    }
+
+    return 0;
+}

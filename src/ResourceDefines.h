@@ -47,7 +47,6 @@ static const char* SPRITE_VERTEX_SHADER[] =
 "varying vec2 uv;\n"
 "uniform vec3 right;\n"
 "uniform vec3 up;\n"
-"uniform vec3 position;\n"
 "uniform vec2 dims;\n"
 "uniform mat4 model_view_projection;\n"
 "void main() {\n"

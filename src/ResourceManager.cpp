@@ -585,7 +585,7 @@ IModel* DFBaseResourceManager::_loadModel(std::string id)
     if(!filedata)
         return NULL;
 
-    IModel* model_data = new Model(filedata);
+    IModel* model_data = new Model(filedata, id);
     delete[] filedata;
 
     m_models.emplace(id, model_data);
@@ -727,7 +727,7 @@ IShader* DFBaseResourceManager::_loadShader(std::string id)
     delete[] fragment_filedata;
     checkGLError();
 
-    IShader* shader_data = new BasicShader(program);
+    IShader* shader_data = new BasicShader(program, id);
 
     m_shaders.emplace(id, shader_data);
     m_programs.emplace(id, program);
@@ -774,6 +774,7 @@ Texture* DFBaseResourceManager::_loadTexture(std::string id)
         return m_textures[id];
     }
 	Texture* texture = new Texture();
+    texture->name = id;
 	glGenTextures(1, &texture->texture_handle);
 	glBindTexture(GL_TEXTURE_2D, texture->texture_handle);
 	

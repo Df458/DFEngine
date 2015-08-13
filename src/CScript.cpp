@@ -153,3 +153,63 @@ void CScript::processCollision(char collision_type, unsigned long other_id)
         }
     }
 }
+
+int cscriptIndex(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access angular velocity, but the Rigid Body Component is missing its instance!");
+    CScript* script = *static_cast<CScript**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    lua_getglobal(script->m_state, lua_tostring(state, 2));
+    switch(lua_type(script->m_state, -1)) {
+        case LUA_TNUMBER:
+            lua_pushnumber(state, lua_tonumber(script->m_state, -1));
+            break;
+        case LUA_TBOOLEAN:
+            lua_pushboolean(state, lua_toboolean(script->m_state, -1));
+            break;
+        case LUA_TSTRING:
+            lua_pushstring(state, lua_tostring(script->m_state, -1));
+            break;
+        case LUA_TFUNCTION:
+            lua_pushcfunction(state, lua_tocfunction(script->m_state, -1));
+            break;
+        default:
+            lua_pop(script->m_state, 1);
+            return 0;
+    }
+    lua_pop(script->m_state, 1);
+
+    return 1;
+}
+
+int cscriptNewIndex(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access angular velocity, but the Rigid Body Component is missing its instance!");
+    CScript* script = *static_cast<CScript**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    switch(lua_type(state, 3)) {
+        case LUA_TNUMBER:
+            lua_pushnumber(script->m_state, lua_tonumber(state, 3));
+            break;
+        case LUA_TBOOLEAN:
+            lua_pushboolean(script->m_state, lua_toboolean(state, -1));
+            break;
+        case LUA_TSTRING:
+            lua_pushstring(script->m_state, lua_tostring(state, -1));
+            break;
+        case LUA_TFUNCTION:
+            lua_pushcfunction(script->m_state, lua_tocfunction(state, -1));
+            break;
+        default:
+            return 0;
+    }
+    lua_setglobal(script->m_state, lua_tostring(state, 2));
+
+    return 0;
+}

@@ -13,6 +13,7 @@
 #include "PhysicsSystem.h"
 #include "ResourceManager.h"
 #include "RenderUtil.h"
+#include "Scene.h"
 #include "Sound.h"
 #include "Game.h"
 #include "Util.h"
@@ -189,6 +190,7 @@ bool Game::buildLevel(std::string level, bool keep_actors)
     m_graphics->loadSceneFromLevel(level_data);
     m_physics->setGravity(level_data->getGravity());
     m_physics->setWorldScale(level_data->getWorldScale());
+    m_graphics->getActiveScene()->updateViewportSize();
     return true;
 }
 

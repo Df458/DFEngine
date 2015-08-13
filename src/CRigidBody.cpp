@@ -192,7 +192,7 @@ ComponentID CRigidBody::getID(void)
     return CRIGIDBODY_ID;
 }
 
-int crigidbody_velocity(lua_State* state)
+int crigidbody_Index(lua_State* state)
 {
     lua_getfield(state, 1, "instance");
     if(!lua_isuserdata(state, -1))
@@ -200,56 +200,62 @@ int crigidbody_velocity(lua_State* state)
     CRigidBody* body = *static_cast<CRigidBody**>(lua_touserdata(state, -1));
     lua_pop(state, 1);
 
-    btVector3 vec = body->m_body->getLinearVelocity();
-    if(lua_gettop(state) >= 4) {
-        bool relative = false;
-        if(lua_gettop(state) >= 5)
-            relative = lua_toboolean(state, 5);
-        btVector3 vel(lua_tonumber(state, 2), lua_tonumber(state, 3), lua_tonumber(state, 4));
-        if(relative)
-            vel += vec; 
-        body->m_body->setLinearVelocity(vel);
-        body->m_body->setActivationState(ACTIVE_TAG);
+    if(!strcmp(lua_tostring(state, 2), "velocity")) {
+        btVector3 vec = body->m_body->getLinearVelocity();
+        lua_newtable(state);
+        lua_pushnumber(state, vec.x());
+        lua_setfield(state, -2, "x");
+        lua_pushnumber(state, vec.y());
+        lua_setfield(state, -2, "y");
+        lua_pushnumber(state, vec.z());
+        lua_setfield(state, -2, "z");
+    } else if(!strcmp(lua_tostring(state, 2), "angular_velocity")) {
+        btVector3 vec = body->m_body->getAngularVelocity();
+        lua_newtable(state);
+        lua_pushnumber(state, vec.x());
+        lua_setfield(state, -2, "x");
+        lua_pushnumber(state, vec.y());
+        lua_setfield(state, -2, "y");
+        lua_pushnumber(state, vec.z());
+        lua_setfield(state, -2, "z");
+    } else
         return 0;
-    }
 
-    lua_newtable(state);
-    lua_pushnumber(state, vec.x());
-    lua_setfield(state, -2, "x");
-    lua_pushnumber(state, vec.y());
-    lua_setfield(state, -2, "y");
-    lua_pushnumber(state, vec.z());
-    lua_setfield(state, -2, "z");
     return 1;
 }
 
-int crigidbody_angular_velocity(lua_State* state)
+int crigidbody_NewIndex(lua_State* state)
 {
     lua_getfield(state, 1, "instance");
     if(!lua_isuserdata(state, -1))
-        return luaL_error(state, "Trying to access angular velocity, but the Rigid Body Component is missing its instance!");
+        return luaL_error(state, "Trying to access velocity, but the Rigid Body Component is missing its instance!");
     CRigidBody* body = *static_cast<CRigidBody**>(lua_touserdata(state, -1));
     lua_pop(state, 1);
 
-    btVector3 vec = body->m_body->getAngularVelocity();
-    if(lua_gettop(state) >= 4) {
-        bool relative = false;
-        if(lua_gettop(state) >= 5)
-            relative = lua_toboolean(state, 5);
-        btVector3 vel(lua_tonumber(state, 2), lua_tonumber(state, 3), lua_tonumber(state, 4));
-        if(relative)
-            vel += vec; 
-        body->m_body->setAngularVelocity(vel);
-        body->m_body->setActivationState(ACTIVE_TAG);
-        return 0;
+    if(!strcmp(lua_tostring(state, 2), "velocity")) {
+        btVector3 vec;
+        lua_getfield(state, 3, "x");
+        vec.setX(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        lua_getfield(state, 3, "y");
+        vec.setY(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        lua_getfield(state, 3, "z");
+        vec.setZ(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        body->m_body->setLinearVelocity(vec);
+    } else if(!strcmp(lua_tostring(state, 2), "angular_velocity")) {
+        btVector3 vec;
+        lua_getfield(state, 3, "x");
+        vec.setX(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        lua_getfield(state, 3, "y");
+        vec.setY(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        lua_getfield(state, 3, "z");
+        vec.setZ(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        body->m_body->setAngularVelocity(vec);
     }
-
-    lua_newtable(state);
-    lua_pushnumber(state, vec.x());
-    lua_setfield(state, -2, "x");
-    lua_pushnumber(state, vec.y());
-    lua_setfield(state, -2, "y");
-    lua_pushnumber(state, vec.z());
-    lua_setfield(state, -2, "z");
-    return 1;
+    return 0;
 }

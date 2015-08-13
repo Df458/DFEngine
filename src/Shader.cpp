@@ -3,8 +3,9 @@
 #include "Shader.h"
 #include "Util.h"
 
-BasicShader::BasicShader(GLuint program)
+BasicShader::BasicShader(GLuint program, std::string name)
 {
+    m_name = name;
     m_program = program;
     m_vertex_position_attrib = glGetAttribLocation(m_program, "vertex_pos");
     m_vertex_uv_attrib = glGetAttribLocation(m_program, "vertex_uv");

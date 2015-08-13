@@ -2,16 +2,15 @@
     <actor static="true">
         <translate z="-3"/>
         <camera>
-            <projection type="ortho" width="800" height="600" near="0.1" far="100"/>
+            <projection type="ortho" width="80" height="60" near="0.1" far="100"/>
             <lookat />
         </camera>
+        <script init="level_manager"/>
     </actor>
-    <actor id="ball" >
+    <actor id="ball">
         <translate x="-10" y="10"/>
     </actor>
-    <actor>
-        <rigidbody mass="0" material="zeroFriction" name="physics">
-            <shape type="box" x="100" y="1" z="1"/>
-        </rigidbody>
+    <actor id="brick">
+        <translate x="-10" y="12"/>
     </actor>
 </level>

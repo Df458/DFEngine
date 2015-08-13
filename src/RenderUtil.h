@@ -1,6 +1,7 @@
 #ifndef RENDER_UTIL
 #define RENDER_UTIL
 #include <GL/glew.h>
+#include <string>
 
 enum RenderPass
 {
@@ -27,10 +28,12 @@ extern GLuint TEXT_PROGRAM;
 extern GLuint QUAD_BUFFER;
 extern GLuint BLANK_TEXTURE;
 
-struct Texture {
+struct Texture
+{
     GLuint texture_handle = 0;
     unsigned texture_width = 0;
     unsigned texture_height = 0;
+    std::string name = "";
 };
 
 #endif

@@ -140,6 +140,7 @@ long SceneNode::getActor(void) const
 
 ModelSceneNode::ModelSceneNode(void)
 {
+    u_attr_funcs = node_model_attr;
     u_model = g_game->resources()->getModel("default");
     u_shader = g_game->resources()->getShader("default");
     u_texture = g_game->resources()->getTexture("default");
@@ -147,6 +148,7 @@ ModelSceneNode::ModelSceneNode(void)
 
 ModelSceneNode::ModelSceneNode(IModel* model, IShader* shader, Texture* texture, RenderPass pass) : SceneNode()
 {
+    u_attr_funcs = node_model_attr;
     u_model = model;
     u_shader = shader;
     m_render_pass = pass;
@@ -392,12 +394,12 @@ void LightSceneNode::setStrength(float strength)
 
 BillboardSceneNode::BillboardSceneNode()
 {
+    u_attr_funcs = node_billboard_attr;
     m_render_pass = RenderPass::UI_PASS;
     m_vertex_position_attrib = glGetAttribLocation(SPRITE_PROGRAM, "vertex_pos");
     m_texture_uniform = glGetUniformLocation(SPRITE_PROGRAM, "texture");
     m_color_uniform = glGetUniformLocation(SPRITE_PROGRAM, "color");
     m_transform_uniform = glGetUniformLocation(SPRITE_PROGRAM, "model_view_projection");
-    m_position_uniform = glGetUniformLocation(SPRITE_PROGRAM, "position");
     m_up_uniform = glGetUniformLocation(SPRITE_PROGRAM, "up");
     m_right_uniform = glGetUniformLocation(SPRITE_PROGRAM, "right");
     m_dims_uniform = glGetUniformLocation(SPRITE_PROGRAM, "dims");
@@ -406,13 +408,13 @@ BillboardSceneNode::BillboardSceneNode()
 
 BillboardSceneNode::BillboardSceneNode(Texture* texture, RGBAColor color, RenderPass pass) : SceneNode()
 {
+    u_attr_funcs = node_billboard_attr;
     m_render_pass = pass;
     u_texture = texture;
     m_vertex_position_attrib = glGetAttribLocation(SPRITE_PROGRAM, "vertex_pos");
     m_texture_uniform = glGetUniformLocation(SPRITE_PROGRAM, "texture");
     m_color_uniform = glGetUniformLocation(SPRITE_PROGRAM, "color");
     m_transform_uniform = glGetUniformLocation(SPRITE_PROGRAM, "model_view_projection");
-    m_position_uniform = glGetUniformLocation(SPRITE_PROGRAM, "position");
     m_up_uniform = glGetUniformLocation(SPRITE_PROGRAM, "up");
     m_right_uniform = glGetUniformLocation(SPRITE_PROGRAM, "right");
     m_dims_uniform = glGetUniformLocation(SPRITE_PROGRAM, "dims");
@@ -442,7 +444,6 @@ void BillboardSceneNode::draw(IScene* scene, RenderPass pass)
     glUniform3f(m_up_uniform, view[0][1], view[1][1], view[2][1]);
     checkGLError();
     glUniform3f(m_right_uniform, view[0][0], view[1][0], view[2][0]);
-    glUniform3f(m_position_uniform, pos.x, pos.y, pos.z);
     glUniform2f(m_dims_uniform, (float)u_texture->texture_width * scene->getDPU(), (float)u_texture->texture_height * scene->getDPU());
     glUniform4f(m_color_uniform, m_color.x, m_color.y, m_color.z, m_color.w);
     glEnableVertexAttribArray(m_vertex_position_attrib);
@@ -483,7 +484,7 @@ bool BillboardSceneNode::getVisible(void)
 
 ParticleSceneNode::ParticleSceneNode()
 {
-    u_funcs = node_particle_funcs;
+    u_attr_funcs = node_particle_attr;
     m_render_pass = RenderPass::UI_PASS;
     m_vertex_position_attrib = glGetAttribLocation(PARTICLE_PROGRAM, "vertex_pos");
     m_texture_uniform = glGetUniformLocation(PARTICLE_PROGRAM, "texture");
@@ -507,7 +508,7 @@ ParticleSceneNode::ParticleSceneNode()
 
 ParticleSceneNode::ParticleSceneNode(Texture* texture, RGBAColor color, float rate, float life, glm::vec2 dims, bool burst, RenderPass pass) : UpdatingSceneNode()
 {
-    u_funcs = node_particle_funcs;
+    u_attr_funcs = node_particle_attr;
 
     m_render_pass = pass;
     u_texture = texture;
@@ -696,12 +697,12 @@ bool ParticleSceneNode::getVisible(void)
 TextSceneNode::TextSceneNode()
 {
     m_render_pass = RenderPass::UI_PASS;
-    u_funcs = node_text_funcs;
+    u_attr_funcs = node_text_attr;
 }
 
 TextSceneNode::TextSceneNode(IFont* font, const char* text, RenderPass pass) : SceneNode()
 {
-    u_funcs = node_text_funcs;
+    u_attr_funcs = node_text_attr;
 
     u_font = font;
     m_render_pass = pass;
@@ -745,6 +746,114 @@ int node_render(lua_State* state)
         return 0;
     } else
         lua_pushboolean(state, node->getRenders());
+    return 1;
+}
+
+int model_model(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a model, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    ModelSceneNode* node = (ModelSceneNode*)gfx->getNode();
+    if(lua_gettop(state) > 1) {
+            node->setModel(g_game->resources()->getModel(lua_tostring(state, 2))); 
+        return 0;
+    }
+    lua_pushstring(state, node->getModel()->getName().c_str());
+    return 1;
+}
+
+int model_shader(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a model, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    ModelSceneNode* node = (ModelSceneNode*)gfx->getNode();
+    if(lua_gettop(state) > 1) {
+            node->setShader(g_game->resources()->getShader(lua_tostring(state, 2)));
+        return 0;
+    }
+    lua_pushstring(state, node->getShader()->getName().c_str());
+    return 1;
+}
+
+int model_texture(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a model, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    ModelSceneNode* node = (ModelSceneNode*)gfx->getNode();
+    if(lua_gettop(state) > 1) {
+            node->setTexture(g_game->resources()->getTexture(lua_tostring(state, 2)));
+        return 0;
+    }
+    lua_pushstring(state, node->getTexture()->name.c_str());
+    return 1;
+}
+
+int billboard_texture(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a billboard, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    BillboardSceneNode* node = (BillboardSceneNode*)gfx->getNode();
+    if(lua_gettop(state) > 1) {
+            node->setTexture(g_game->resources()->getTexture(lua_tostring(state, 2)));
+        return 0;
+    }
+    lua_pushstring(state, node->getTexture()->name.c_str());
+    return 1;
+}
+
+int billboard_color(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a billboard, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    BillboardSceneNode* node = (BillboardSceneNode*)gfx->getNode();
+    RGBAColor color;
+    if(lua_gettop(state) > 1) {
+        lua_getfield(state, 2, "r");
+        color.x = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "g");
+        color.y = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "b");
+        color.z = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "a");
+        color.w = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        node->setColor(color);
+        return 0;
+    }
+    color = node->getColor();
+    lua_pushstring(state, node->getTexture()->name.c_str());
+    lua_newtable(state);
+    lua_pushnumber(state, color.x);
+    lua_setfield(state, -2, "r");
+    lua_pushnumber(state, color.y);
+    lua_setfield(state, -2, "g");
+    lua_pushnumber(state, color.z);
+    lua_setfield(state, -2, "b");
+    lua_pushnumber(state, color.w);
+    lua_setfield(state, -2, "a");
     return 1;
 }
 

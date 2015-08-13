@@ -33,22 +33,54 @@ public:
     virtual void setLocalTransform(Transform* trans) = 0;
     virtual ISceneNode* getParent(void) const = 0;
     virtual const luaL_Reg* getFuncs(void) const = 0;
+    virtual const luaL_Reg* getAttrFuncs(void) const = 0;
 protected:
     virtual void setParent(ISceneNode* parent) = 0;
 };
 
 int node_render(lua_State* state);
-int text_text(lua_State* state);
+
+int model_model(lua_State* state);
+int model_shader(lua_State* state);
+int model_texture(lua_State* state);
+
+int billboard_color(lua_State* state);
+int billboard_texture(lua_State* state);
+
 int particle_spawning(lua_State* state);
 int particle_count(lua_State* state);
 
+int text_text(lua_State* state);
+
 const luaL_Reg node_default_funcs[] =
+{
+    {0, 0}
+};
+
+const luaL_Reg node_default_attr[] =
 {
     {"render", node_render},
     {0, 0}
 };
 
-const luaL_Reg node_particle_funcs[] =
+const luaL_Reg node_model_attr[] =
+{
+    {"render", node_render},
+    {"model", model_model},
+    {"shader", model_shader},
+    {"texture", model_texture},
+    {0, 0}
+};
+
+const luaL_Reg node_billboard_attr[] =
+{
+    {"render", node_render},
+    {"color", billboard_color},
+    {"texture", billboard_texture},
+    {0, 0}
+};
+
+const luaL_Reg node_particle_attr[] =
 {
     {"render", node_render},
     {"spawning", particle_spawning},
@@ -56,7 +88,7 @@ const luaL_Reg node_particle_funcs[] =
     {0, 0}
 };
 
-const luaL_Reg node_text_funcs[] =
+const luaL_Reg node_text_attr[] =
 {
     {"render", node_render},
     {"text", text_text},
@@ -84,6 +116,7 @@ public:
     virtual long getActor(void) const;
     virtual ISceneNode* getParent(void) const { return u_parent; }
     virtual const luaL_Reg* getFuncs(void) const { return u_funcs; }
+    virtual const luaL_Reg* getAttrFuncs(void) const { return u_attr_funcs; }
     void setTransform(Transform* trans) final;
     void setLocalTransform(Transform* trans) final { m_local_transform = trans; }
 protected:
@@ -94,6 +127,7 @@ protected:
     RenderPass m_render_pass;
     bool m_renders = true;
     const luaL_Reg* u_funcs = node_default_funcs;
+    const luaL_Reg* u_attr_funcs = node_default_attr;
 private:
     std::vector<ISceneNode*> u_children;
     ISceneNode* u_parent = nullptr;
@@ -114,6 +148,12 @@ public:
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool getVisible(void);
     virtual bool fromXml(rapidxml::xml_node<>* node);
+    virtual const IModel* getModel(void) { return u_model; }
+    virtual const IShader* getShader(void) { return u_shader; }
+    virtual const Texture* getTexture(void) { return u_texture; }
+    virtual void setModel(IModel* model) { u_model = model; }
+    virtual void setShader(IShader* shader) { u_shader = shader; }
+    virtual void setTexture(Texture* texture) { u_texture = texture; }
 protected:
     IModel* u_model = nullptr;
     IShader* u_shader = nullptr;
@@ -183,6 +223,8 @@ public:
     virtual bool fromXml(rapidxml::xml_node<>* node);
     void setColor(RGBAColor color) { m_color = color; }
     RGBAColor getColor(void) { return m_color; }
+    virtual const Texture* getTexture(void) { return u_texture; }
+    void setTexture(Texture* texture) { u_texture = texture; }
     virtual bool getVisible(void);
 protected:
     GLuint m_vertex_position_attrib = 0;
@@ -193,7 +235,6 @@ protected:
     GLuint m_up_uniform = 0;
     GLuint m_right_uniform = 0;
     GLuint m_dims_uniform = 0;
-    GLuint m_position_uniform = 0;
 
     RGBAColor m_color = RGBAColor(Color::White, 1.0f);
     Texture* u_texture = 0;

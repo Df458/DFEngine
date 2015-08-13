@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include <string>
 #include <vector>
 
 class IModel
@@ -17,13 +18,14 @@ public:
     virtual GLuint getIndices(void) const = 0;
     virtual GLuint getNormals(void) const = 0;
     virtual GLuint getUVs(void) const = 0;
+    virtual std::string getName(void) const = 0;
 };
 inline IModel::~IModel(void) {}
 
 class Model : public IModel
 {
 public:
-    Model(char* model_data);
+    Model(char* model_data, std::string name);
     Model(void);
     ~Model(void);
 
@@ -33,6 +35,7 @@ public:
     virtual GLuint getIndices(void) const;
     virtual GLuint getNormals(void) const;
     virtual GLuint getUVs(void) const;
+    virtual std::string getName(void) const { return m_name; }
 protected:
     unsigned int m_index_count;
     GLuint m_vertices;
@@ -45,6 +48,7 @@ protected:
     glm::vec2* m_uv_data = 0;
     bool m_has_uvs = false;
     bool m_has_normals = false;
+    std::string m_name = "";
 };
 
 #endif

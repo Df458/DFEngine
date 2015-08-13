@@ -11,13 +11,18 @@ class Actor;
 
 IComponent* buildRigidBody(rapidxml::xml_node<>* node, Actor* actor);
 
-int crigidbody_velocity(lua_State* state);
-int crigidbody_angular_velocity(lua_State* state);
+int crigidbody_Index(lua_State* state);
+int crigidbody_NewIndex(lua_State* state);
 
 const luaL_Reg crigidbody_funcs[] =
 {
-    {"velocity", crigidbody_velocity},
-    {"angular_velocity", crigidbody_angular_velocity},
+    {0, 0}
+};
+
+const luaL_Reg crigidbody_meta[] =
+{
+    {"__index", crigidbody_Index},
+    {"__newindex", crigidbody_NewIndex},
     {0, 0}
 };
 
@@ -28,13 +33,15 @@ public:
     virtual void destroy(void);
     virtual void update(float delta_time);
     virtual void setTransform(const btTransform& transform, const btVector3& scale);
+    virtual const btTransform& getTransform(void) const { return m_body->getWorldTransform(); }
     virtual void addForce(btVector3 force, btVector3 vec);
     virtual ComponentID getID(void);
     virtual const luaL_Reg* getFuncs(void) const { return crigidbody_funcs; }
+    virtual const luaL_Reg* getMetaFuncs(void) const { return crigidbody_meta; }
 
     friend IComponent* buildRigidBody(rapidxml::xml_node<>* node, Actor* actor);
-    friend int crigidbody_velocity(lua_State* state);
-    friend int crigidbody_angular_velocity(lua_State* state);
+    friend int crigidbody_Index(lua_State* state);
+    friend int crigidbody_NewIndex(lua_State* state);
 protected:
     btRigidBody* m_body;
     btVector3 m_last_scale;

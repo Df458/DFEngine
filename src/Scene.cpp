@@ -329,6 +329,12 @@ void Scene::updateViewportSize(int width, int height)
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 }
 
+void Scene::updateViewportSize()
+{
+    if(m_active_camera)
+        m_active_camera->reProject(m_view_dims.x, m_view_dims.y);
+}
+
 void Scene::CGraphicsCreatedCallback(const IEvent& event)
 {
     if(event.getEventType() != CGraphicsCreatedEvent::m_type) {
