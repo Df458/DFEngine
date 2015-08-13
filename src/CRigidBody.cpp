@@ -20,10 +20,13 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     xml_node<>* afac_node = node->first_node("angular_factor", 14, false);
     xml_node<>* lvel_node = node->first_node("linear_velocity", 15, false);
     xml_node<>* avel_node = node->first_node("angular_velocity", 16, false);
+    xml_node<>* layer_node = node->first_node("layer", 5, false);
     btVector3 linear_fac(1, 1, 1);
     btVector3 angular_fac(1, 1, 1);
     btVector3 linear_vel(0, 0, 0);
     btVector3 angular_vel(0, 0, 0);
+    int mask = -1;
+    int group = -1;
     PhysicsMaterial mat;
     xml_attribute<>* shape_id = NULL;
     btCollisionShape* shape = NULL;
@@ -109,6 +112,12 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
         if(xml_attribute<>* at = avel_node->first_attribute("z", 1, false))
             angular_vel.setZ(atof(at->value()));
     }
+    if(layer_node) {
+        if(xml_attribute<>* at = layer_node->first_attribute("mask", 4, false))
+            mask = atoi(at->value());
+        if(xml_attribute<>* at = layer_node->first_attribute("group", 5, false))
+            group = atoi(at->value());
+    }
 
     float mass = 0;
     if(xml_attribute<>* ma = node->first_attribute("mass", 4, false))
@@ -127,6 +136,8 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
 
     CRigidBody* component = new CRigidBody();
     component->m_body = rigid_body;
+    component->m_mask = mask;
+    component->m_group = group;
     rigid_body->setUserPointer(actor);
     CRigidBodyCreatedEvent created_ev(rigid_body, actor->getID());
     g_game->events()->callEvent(created_ev);
@@ -159,6 +170,8 @@ btRigidBody* CRigidBodyCreatedEvent::getBody(void) const
 
 void CRigidBody::init(void)
 {
+    m_body->getBroadphaseProxy()->m_collisionFilterMask = m_mask;
+    m_body->getBroadphaseProxy()->m_collisionFilterGroup = m_group;
 }
 
 void CRigidBody::destroy(void)
@@ -218,6 +231,10 @@ int crigidbody_Index(lua_State* state)
         lua_setfield(state, -2, "y");
         lua_pushnumber(state, vec.z());
         lua_setfield(state, -2, "z");
+    } else if(!strcmp(lua_tostring(state, 2), "collision_mask")) {
+        lua_pushinteger(state, body->m_body->getBroadphaseProxy()->m_collisionFilterMask);
+    } else if(!strcmp(lua_tostring(state, 2), "collision_group")) {
+        lua_pushinteger(state, body->m_body->getBroadphaseProxy()->m_collisionFilterGroup);
     } else
         return 0;
 
@@ -256,6 +273,11 @@ int crigidbody_NewIndex(lua_State* state)
         vec.setZ(lua_tonumber(state, -1));
         lua_pop(state, 1);
         body->m_body->setAngularVelocity(vec);
-    }
+    } else if(!strcmp(lua_tostring(state, 2), "collision_mask")) {
+        body->m_body->getBroadphaseProxy()->m_collisionFilterMask = lua_tointeger(state, 3);
+    } else if(!strcmp(lua_tostring(state, 2), "collision_group")) {
+        body->m_body->getBroadphaseProxy()->m_collisionFilterGroup = lua_tointeger(state, 3);
+    } else
+        warn("Trying to set a Rigidbody field that doesn't exist");
     return 0;
 }

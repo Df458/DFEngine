@@ -45,6 +45,8 @@ public:
 protected:
     btRigidBody* m_body;
     btVector3 m_last_scale;
+    int m_mask = -1;
+    int m_group = -1;
 };
 
 class CRigidBodyCreatedEvent : public IEvent
