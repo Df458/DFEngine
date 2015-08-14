@@ -267,10 +267,11 @@ Level* DFBaseResourceManager::getLevel(std::string id)
 
 IModel* DFBaseResourceManager::getModel(std::string id)
 {
+    std::string name = id;
     id = MODEL_DATA_PATH + id + MODEL_SUFFIX;
     auto search = m_models.find(id);
     if(search == m_models.end()) {
-        IModel* load_result = _loadModel(id);
+        IModel* load_result = _loadModel(id, name);
         if(!load_result) {
             error("Trying to load a model that doesn't exist.");
             return NULL;
@@ -327,10 +328,11 @@ char* const DFBaseResourceManager::getScript(std::string id)
 
 IShader* DFBaseResourceManager::getShader(std::string id)
 {
+    std::string name = id;
     id = SHADER_DATA_PATH + id;
     auto search = m_shaders.find(id);
     if(search == m_shaders.end()) {
-        IShader* load_result = _loadShader(id);
+        IShader* load_result = _loadShader(id, name);
         if(!load_result) {
             error("Trying to load a shader that doesn't exist.");
             return NULL;
@@ -359,10 +361,11 @@ Material* DFBaseResourceManager::getShaderMaterial(std::string id)
 
 Texture* DFBaseResourceManager::getTexture(std::string id)
 {
+    std::string name = id;
     id = TEXTURE_DATA_PATH + id + TEXTURE_SUFFIX;
     auto search = m_textures.find(id);
     if(search == m_textures.end()) {
-        Texture* load_result = _loadTexture(id);
+        Texture* load_result = _loadTexture(id, name);
         if(!load_result) {
             error("Trying to load a texture that doesn't exist.");
             return 0;
@@ -425,7 +428,8 @@ bool DFBaseResourceManager::loadLevel(std::string id)
 
 bool DFBaseResourceManager::loadModel(std::string id)
 {
-    IModel* data = _loadModel(MODEL_DATA_PATH + id + MODEL_SUFFIX);
+    std::string name = id;
+    IModel* data = _loadModel(MODEL_DATA_PATH + id + MODEL_SUFFIX, name);
     if(!data) {
         warn("Trying to load a model that doesn't exist.");
         return false;
@@ -461,7 +465,8 @@ bool DFBaseResourceManager::loadScript(std::string id)
 
 bool DFBaseResourceManager::loadShader(std::string id)
 {
-    IShader* data = _loadShader(SHADER_DATA_PATH + id);
+    std::string name = id;
+    IShader* data = _loadShader(SHADER_DATA_PATH + id, name);
     if(!data) {
         warn("Trying to load a shader that doesn't exist.");
         return false;
@@ -481,7 +486,8 @@ bool DFBaseResourceManager::loadShaderMaterial(std::string id)
 
 bool DFBaseResourceManager::loadTexture(std::string id)
 {
-    Texture* data = _loadTexture(TEXTURE_DATA_PATH + id +TEXTURE_SUFFIX);
+    std::string name = id;
+    Texture* data = _loadTexture(TEXTURE_DATA_PATH + id +TEXTURE_SUFFIX, name);
     if(!data) {
         warn("Trying to load a texture that doesn't exist.");
         return false;
@@ -575,7 +581,7 @@ Level* DFBaseResourceManager::_loadLevel(std::string id)
     return level_data;
 }
 
-IModel* DFBaseResourceManager::_loadModel(std::string id)
+IModel* DFBaseResourceManager::_loadModel(std::string id, std::string name)
 {
     if(m_models.find(id) != m_models.end()) {
         warn("Trying to load an model that already exists.");
@@ -585,7 +591,7 @@ IModel* DFBaseResourceManager::_loadModel(std::string id)
     if(!filedata)
         return NULL;
 
-    IModel* model_data = new Model(filedata, id);
+    IModel* model_data = new Model(filedata, name);
     delete[] filedata;
 
     m_models.emplace(id, model_data);
@@ -675,7 +681,7 @@ GLuint DFBaseResourceManager::_loadProgram(std::string id)
     return program;
 }
 
-IShader* DFBaseResourceManager::_loadShader(std::string id)
+IShader* DFBaseResourceManager::_loadShader(std::string id, std::string name)
 {
     if(m_shaders.find(id) != m_shaders.end()) {
         warn("Trying to load a shader that already exists.");
@@ -727,7 +733,7 @@ IShader* DFBaseResourceManager::_loadShader(std::string id)
     delete[] fragment_filedata;
     checkGLError();
 
-    IShader* shader_data = new BasicShader(program, id);
+    IShader* shader_data = new BasicShader(program, name);
 
     m_shaders.emplace(id, shader_data);
     m_programs.emplace(id, program);
@@ -767,14 +773,14 @@ char* DFBaseResourceManager::_loadScript(std::string id)
     return script;
 }
 
-Texture* DFBaseResourceManager::_loadTexture(std::string id)
+Texture* DFBaseResourceManager::_loadTexture(std::string id, std::string name)
 {
     if(m_textures.find(id) != m_textures.end()) {
         warn("Trying to load a texture that already exists.");
         return m_textures[id];
     }
 	Texture* texture = new Texture();
-    texture->name = id;
+    texture->name = name;
 	glGenTextures(1, &texture->texture_handle);
 	glBindTexture(GL_TEXTURE_2D, texture->texture_handle);
 	

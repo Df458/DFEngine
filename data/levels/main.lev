@@ -5,7 +5,7 @@
             <projection type="ortho" width="80" height="60" near="0.1" far="100"/>
             <lookat />
         </camera>
-        <script name="level" init="level_manager" update="level_loader"/>
+        <script name="level" id="level_manager"/>
     </actor>
     <actor id="ball">
         <translate x="-10" y="10"/>

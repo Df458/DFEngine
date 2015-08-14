@@ -101,13 +101,13 @@ protected:
     virtual ISound* _loadAudioStream(std::string id);
     virtual IFont* _loadFont(std::string id);
     virtual Level* _loadLevel(std::string id);
-    virtual IModel* _loadModel(std::string id);
+    virtual IModel* _loadModel(std::string id, std::string name);
     virtual PhysicsMaterial _loadPhysicsMaterial(std::string id);
     virtual GLuint _loadProgram(std::string id);
-    virtual IShader* _loadShader(std::string id);
+    virtual IShader* _loadShader(std::string id, std::string name);
     virtual Material* _loadShaderMaterial(std::string id);
     virtual char* _loadScript(std::string id);
-    virtual Texture* _loadTexture(std::string id);
+    virtual Texture* _loadTexture(std::string id, std::string name);
 
     FT_Library m_font_library;
 };

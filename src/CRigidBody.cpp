@@ -27,6 +27,7 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     btVector3 angular_vel(0, 0, 0);
     int mask = -1;
     int group = -1;
+    bool kinematic = false;
     PhysicsMaterial mat;
     xml_attribute<>* shape_id = NULL;
     btCollisionShape* shape = NULL;
@@ -122,6 +123,16 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     float mass = 0;
     if(xml_attribute<>* ma = node->first_attribute("mass", 4, false))
         mass = atof(ma->value()) * mat.mass;
+
+    if(xml_attribute<>* at = node->first_attribute("type", 4, false)) {
+        if(!strcmp(at->value(), "static")) {
+            mass = 0;
+        }
+        if(!strcmp(at->value(), "kinematic")) {
+            mass = 0;
+            kinematic = true;
+        }
+    }
     btVector3 inertia(0, 0, 0);
     shape->calculateLocalInertia(mass, inertia);
     btRigidBody::btRigidBodyConstructionInfo cinfo = btRigidBody::btRigidBodyConstructionInfo(mass, actor->getTransform(), shape, inertia);
@@ -133,6 +144,10 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     rigid_body->setAngularFactor(angular_fac);
     rigid_body->setLinearVelocity(linear_vel);
     rigid_body->setAngularVelocity(angular_vel);
+    if(kinematic) {
+        rigid_body->setCollisionFlags(rigid_body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+        rigid_body->setActivationState(DISABLE_DEACTIVATION);
+    }
 
     CRigidBody* component = new CRigidBody();
     component->m_body = rigid_body;

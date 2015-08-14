@@ -19,30 +19,11 @@ IComponent* buildScript(xml_node<>* node, Actor* actor)
 {
     CScript* component = new CScript();
     component->m_state = luaL_newstate();
-    luaL_openlibs(component->m_state);
-    if(xml_attribute<>* attr = node->first_attribute("init")) {
+    if(xml_attribute<>* attr = node->first_attribute("id")) {
         luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "init");
-    }
-
-    if(xml_attribute<>* attr = node->first_attribute("update")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "update");
-    }
-
-    if(xml_attribute<>* attr = node->first_attribute("collision_enter")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "collision_enter");
-    }
-
-    if(xml_attribute<>* attr = node->first_attribute("collision_tick")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "collision_tick");
-    }
-
-    if(xml_attribute<>* attr = node->first_attribute("collision_leave")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "collision_leave");
+        if(lua_pcall(component->m_state, 0, 0, 0)) {
+            warn(lua_tostring(component->m_state, -1));
+        }
     }
 
     for(xml_node<>* in = node->first_node("int", 3, false); in; in = in->next_sibling("int", 3, 0))
