@@ -33,11 +33,13 @@ class CScript : public IComponent
 public:
     virtual void init(void);
     virtual void destroy(void);
+    virtual void callDestroy(void);
     virtual void update(float delta_time);
     virtual ComponentID getID(void);
     virtual void processCollision(char collision_type, unsigned long other_id);
     virtual const luaL_Reg* getFuncs(void) const { return cscript_funcs; }
     virtual const luaL_Reg* getMetaFuncs(void) const { return cscript_meta; }
+    virtual bool get_has_update(void) const { return m_has_update; }
 
     friend IComponent* buildScript(rapidxml::xml_node<>* node, Actor* actor);
     friend int cscriptIndex(lua_State* state);
@@ -45,6 +47,7 @@ public:
 protected:
     lua_State* m_state;
     Actor** m_other_actor;
+    bool m_has_update;
 };
 
 #endif

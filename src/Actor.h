@@ -46,9 +46,11 @@ public:
 
     friend class ActorSystem;
     friend int actor_get_component(lua_State* state);
+    friend int actor_newindex(lua_State* state);
 protected:
     std::string m_type;
     std::set<IComponent*> m_components;
+    std::set<IComponent*> m_updating_components;
     std::set<CScript*> m_scripts;
     std::unordered_map<std::string, IComponent*> m_named_components;
     //std::map<ComponentID, IComponent*> m_components;
@@ -107,6 +109,11 @@ int actor_destroy(lua_State* state);
 int actor_apply_force(lua_State* state); // TODO: Move this to CRigidbody
 int actor_get_component(lua_State* state);
 int actor_transform(lua_State* state);
+int actor_register_tween(lua_State* state);
+int actor_get_tween_value(lua_State* state);
+int actor_get_tween(lua_State* state);
+int actor_index(lua_State* state);
+int actor_newindex(lua_State* state);
 
 const luaL_Reg actor_funcs[] =
 {
@@ -117,6 +124,14 @@ const luaL_Reg actor_funcs[] =
     {"get_component", actor_get_component},
     {"transform", actor_transform},
     {"destroy", actor_destroy},
+    {"register_tween", actor_register_tween},
+    {0, 0}
+};
+
+const luaL_Reg actor_meta[] =
+{
+    {"__index", actor_index},
+    {"__newindex", actor_newindex},
     {0, 0}
 };
 

@@ -19,8 +19,9 @@ class GraphicsSystem;
 class InputSystem;
 class PhysicsSystem;
 class ResourceManager;
+class TweenSystem;
 
-class Game : public ISystem
+class Game
 {
 public:
     Game(void);
@@ -29,6 +30,7 @@ public:
     virtual void cleanup(void);
     virtual bool buildLevel(std::string level, bool keep_actors = false);
     void quit(void);
+    bool isQuitting(void) { return m_quit; }
 
     inline ResourceManager* resources(void) const { return m_resources; }
     inline IComponentFactory* components(void) const { return m_components; }
@@ -37,6 +39,7 @@ public:
     inline PhysicsSystem* physics(void) const { return m_physics; }
     inline ActorSystem* actors(void) const { return m_actors; }
     inline GraphicsSystem* graphics(void) const { return m_graphics; }
+    inline TweenSystem* tweens(void) const { return m_tweens; }
 protected:
     EventSystem* m_events;
     ActorSystem* m_actors;
@@ -45,6 +48,7 @@ protected:
     InputSystem* m_input;
     PhysicsSystem* m_physics;
     ResourceManager* m_resources;
+    TweenSystem* m_tweens;
     IComponentFactory* m_components;
     float m_delta_time;
 private:

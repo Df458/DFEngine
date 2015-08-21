@@ -38,6 +38,7 @@ public:
     virtual ComponentID getID(void);
     virtual const luaL_Reg* getFuncs(void) const { return crigidbody_funcs; }
     virtual const luaL_Reg* getMetaFuncs(void) const { return crigidbody_meta; }
+    virtual bool get_has_update(void) const { return false; }
 
     friend IComponent* buildRigidBody(rapidxml::xml_node<>* node, Actor* actor);
     friend int crigidbody_Index(lua_State* state);

@@ -15,7 +15,6 @@ class IPhysics
 {
 public:
     virtual ~IPhysics(void) = 0;
-    virtual void step(float delta_time) = 0;
 };
 
 inline IPhysics::~IPhysics() {}
@@ -26,7 +25,7 @@ public:
     PhysicsSystem(void);
     virtual ~PhysicsSystem(void);
     bool initialize(void);
-    void step(float delta_time);
+    void update(float delta_time);
     void cleanup(void);
     void setPhysicsDebug(PhysicsRenderer* pr) { u_physics_debug = pr; m_physics_world->setDebugDrawer(u_physics_debug); }
     inline void setGravity(glm::vec3 gravity) { m_physics_world->setGravity(btVector3(gravity.x, gravity.y, gravity.z)); }

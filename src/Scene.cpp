@@ -337,6 +337,21 @@ void Scene::updateViewportSize()
         m_active_camera->reProject(m_view_dims.x, m_view_dims.y);
 }
 
+glm::vec2 Scene::getViewportRemainder(void) const
+{
+    if(!m_active_camera)
+        return glm::vec2(0);
+    glm::vec2 aspect_diff = m_active_camera->getAspectDifference();
+    glm::vec2 remainder(0);
+    if(aspect_diff.x > 0) {
+        remainder.x = aspect_diff.x * m_view_dims.y;
+    } else if(aspect_diff.y > 0) {
+        remainder.y = aspect_diff.y * m_view_dims.x;
+    }
+
+    return remainder;
+}
+
 void Scene::CGraphicsCreatedCallback(const IEvent& event)
 {
     if(event.getEventType() != CGraphicsCreatedEvent::m_type) {

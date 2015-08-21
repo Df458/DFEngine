@@ -15,6 +15,7 @@
 #include "RenderUtil.h"
 #include "Scene.h"
 #include "Sound.h"
+#include "TweenSystem.h"
 #include "Game.h"
 #include "Util.h"
 
@@ -35,11 +36,14 @@ bool Game::initialize(void)
     m_audio = new AudioSystem();
     m_graphics = new GraphicsSystem();
     m_physics = new PhysicsSystem();
+    m_tweens = new TweenSystem();
+    m_resources = new DFBaseResourceManager();
     m_resources = new DFBaseResourceManager();
     m_components = new ComponentFactory();
 
     if(!m_events->initialize()) {
         delete m_resources;
+        delete m_tweens;
         delete m_actors;
         delete m_physics;
         delete m_graphics;
@@ -52,6 +56,7 @@ bool Game::initialize(void)
     if(!m_graphics->initialize()) {
         delete m_audio;
         delete m_resources;
+        delete m_tweens;
         delete m_actors;
         delete m_physics;
         delete m_graphics;
@@ -65,6 +70,7 @@ bool Game::initialize(void)
     if(!m_physics->initialize()) {
         delete m_audio;
         delete m_resources;
+        delete m_tweens;
         delete m_actors;
         delete m_physics;
         m_graphics->cleanup();
@@ -79,6 +85,7 @@ bool Game::initialize(void)
     if(!m_actors->initialize()) {
         delete m_audio;
         delete m_resources;
+        delete m_tweens;
         delete m_actors;
         m_physics->cleanup();
         delete m_physics;
@@ -91,9 +98,27 @@ bool Game::initialize(void)
         return false;
     }
 
+    if(!m_tweens->initialize()) {
+        delete m_audio;
+        delete m_resources;
+        m_actors->cleanup();
+        delete m_actors;
+        m_physics->cleanup();
+        delete m_physics;
+        m_graphics->cleanup();
+        delete m_graphics;
+        m_events->cleanup();
+        delete m_events;
+        glfwTerminate();
+        error("Failed to initialize the TweenSystem.");
+        return false;
+    }
+
     if(!m_resources->initialize()) {
         delete m_audio;
         delete m_resources;
+        m_tweens->cleanup();
+        delete m_tweens;
         m_actors->cleanup();
         delete m_actors;
         m_physics->cleanup();
@@ -107,10 +132,14 @@ bool Game::initialize(void)
         return false;
     }
 
+    m_graphics->init_letterbox();
+
     if(!m_audio->initialize()) {
         delete m_audio;
         m_resources->cleanup();
         delete m_resources;
+        m_tweens->cleanup();
+        delete m_tweens;
         m_actors->cleanup();
         delete m_actors;
         m_physics->cleanup();
@@ -138,11 +167,12 @@ void Game::mainLoop(void)
     do {
         m_delta_time = glfwGetTime();
         glfwSetTime(0);
-        m_physics->step(m_delta_time);
-        m_input->update();
+        m_physics->update(m_delta_time);
+        m_input->update(m_delta_time);
         glfwPollEvents();
-        m_events->update();
-        m_actors->step(m_delta_time);
+        m_events->update(m_delta_time);
+        m_tweens->update(m_delta_time);
+        m_actors->update(m_delta_time);
         m_graphics->render();
     } while(!m_quit);
 }
@@ -156,6 +186,9 @@ void Game::cleanup(void)
 
     m_audio->cleanup();
     delete m_audio;
+
+    m_tweens->cleanup();
+    delete m_tweens;
 
     m_actors->cleanup();
     delete m_actors;

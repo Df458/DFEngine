@@ -23,6 +23,7 @@ bool _checkGLError(const char* file, unsigned line);
 
 extern GLuint WIREFRAME_PROGRAM;
 extern GLuint SPRITE_PROGRAM;
+extern GLuint LETTERBOX_PROGRAM;
 extern GLuint PARTICLE_PROGRAM;
 extern GLuint TEXT_PROGRAM;
 extern GLuint QUAD_BUFFER;

@@ -14,4 +14,10 @@ PhysicsMaterial::PhysicsMaterial(rapidxml::xml_node<>* node)
         if(xml_attribute<>* attr = n->first_attribute("rolling", 7, false))
             rolling_friction = atof(attr->value());
     }
+    if(xml_node<>* n = node->first_node("damping", 7, false)) {
+        if(xml_attribute<>* attr = n->first_attribute("linear", 6, false))
+            linear_damp = atof(attr->value());
+        if(xml_attribute<>* attr = n->first_attribute("angular", 7, false))
+            angular_damp = atof(attr->value());
+    }
 }

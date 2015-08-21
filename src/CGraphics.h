@@ -51,6 +51,7 @@ public:
     virtual const luaL_Reg* getMetaFuncs(void) const { return cgraphics_meta; }
     virtual const luaL_Reg* getAttrFuncs(void) const { return m_node->getAttrFuncs(); }
     ISceneNode* getNode(void) { return m_node; }
+    virtual bool get_has_update(void) const { return m_updates; }
 
     friend IComponent* buildGraphics(rapidxml::xml_node<>* node, Actor* actor);
 protected:
@@ -68,6 +69,7 @@ public:
     virtual const luaL_Reg* getFuncs(void) const { return ccamera_funcs; }
     virtual const luaL_Reg* getMetaFuncs(void) const { return ccamera_meta; }
     virtual const luaL_Reg* getAttrFuncs(void) const { return m_node->getAttrFuncs(); }
+    virtual bool get_has_update(void) const { return false; }
 
     friend IComponent* buildCamera(rapidxml::xml_node<>* node, Actor* actor);
     friend int ccamera_lookat(lua_State* state);

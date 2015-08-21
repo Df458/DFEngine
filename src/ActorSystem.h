@@ -17,7 +17,7 @@ class ActorSystem : public ISystem
 public:
     ActorSystem(void);
     bool initialize(void);
-    void step(float delta_time);
+    void update(float delta_time);
     void cleanup(void);
     void clear(void);
     void softClear(void);

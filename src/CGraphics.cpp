@@ -95,9 +95,7 @@ void CGraphics::destroy(void)
 
 void CGraphics::update(float delta_time)
 {
-    if(m_updates) {
-        ((UpdatingSceneNode*)m_node)->update(delta_time);
-    }
+    ((UpdatingSceneNode*)m_node)->update(delta_time);
 }
 
 ComponentID CGraphics::getID(void)
@@ -169,11 +167,22 @@ int cgraphics_Index(lua_State* state)
     CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
     lua_pop(state, 1);
 
-    const luaL_Reg* funcs = gfx->getAttrFuncs();
-    for(unsigned i = 0; funcs[i].name != 0; ++i) {
-        if(!strcmp(lua_tostring(state, 2), funcs[i].name)) {
-            lua_settop(state, 1);
-            return funcs[i].func(state);
+    if(!strcmp(lua_tostring(state, 2), "transform")) {
+        lua_newtable(state);
+        Transform** t = static_cast<Transform**>(lua_newuserdata(state, sizeof(Transform*)));
+        *t = gfx->getNode()->getLocalTransform();
+        lua_setfield(state, -2, "instance");
+        lua_newtable(state);
+        luaL_setfuncs(state, transform_meta, 0);
+        lua_setmetatable(state, -2);
+        return 1;
+    } else {
+        const luaL_Reg* funcs = gfx->getAttrFuncs();
+        for(unsigned i = 0; funcs[i].name != 0; ++i) {
+            if(!strcmp(lua_tostring(state, 2), funcs[i].name)) {
+                lua_settop(state, 1);
+                return funcs[i].func(state);
+            }
         }
     }
 

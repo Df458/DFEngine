@@ -19,13 +19,7 @@ IComponent* buildScript(xml_node<>* node, Actor* actor)
 {
     CScript* component = new CScript();
     component->m_state = luaL_newstate();
-    if(xml_attribute<>* attr = node->first_attribute("id")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        if(lua_pcall(component->m_state, 0, 0, 0)) {
-            warn(lua_tostring(component->m_state, -1));
-        }
-    }
-
+    luaL_openlibs(component->m_state);
     for(xml_node<>* in = node->first_node("int", 3, false); in; in = in->next_sibling("int", 3, 0))
         if(xml_attribute<>* na = in->first_attribute("name", 4, false))
             if(xml_attribute<>* va = in->first_attribute("value", 5, false)) {
@@ -85,12 +79,34 @@ IComponent* buildScript(xml_node<>* node, Actor* actor)
     lua_pushinteger(component->m_state, 1);
     lua_setglobal(component->m_state, "KEY_PRESSED");
 
+    if(xml_attribute<>* attr = node->first_attribute("id")) {
+        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
+        if(lua_pcall(component->m_state, 0, 0, 0)) {
+            warn(lua_tostring(component->m_state, -1));
+        }
+    }
+
+    lua_getglobal(component->m_state, "update");
+    if(lua_isfunction(component->m_state, -1))
+        component->m_has_update = true;
+    lua_pop(component->m_state, 1);
+
     return component;
 }
 
 void CScript::init(void)
 {
     lua_getglobal(m_state, "init");
+    if(!lua_isfunction(m_state, -1)) {
+        lua_pop(m_state, 1);
+    } else if(lua_pcall(m_state, 0, 0, 0)) {
+        warn(lua_tostring(m_state, -1));
+    }
+}
+
+void CScript::callDestroy(void)
+{
+    lua_getglobal(m_state, "destroy");
     if(!lua_isfunction(m_state, -1)) {
         lua_pop(m_state, 1);
     } else if(lua_pcall(m_state, 0, 0, 0)) {

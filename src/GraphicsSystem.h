@@ -30,6 +30,8 @@ public:
     GraphicsSystem(void);
     virtual ~GraphicsSystem(void);
     virtual bool initialize(void);
+    virtual void init_letterbox(void);
+    virtual void update(float dt);
     virtual void render(void) const;
     virtual void cleanup(void);
     virtual void setTitle(const char* title) final;
@@ -45,6 +47,11 @@ private:
     GLFWwindow* m_main_window = 0;
     IScene* m_active_scene = 0;
     PhysicsRenderer* m_physics_debug = 0;
+
+    GLuint m_letterbox_vertex_attrib;
+    GLuint m_letterbox_translation_uniform;
+    GLuint m_letterbox_scale_uniform;
+    GLuint m_letterbox_color_uniform;
 };
 
 struct WindowData

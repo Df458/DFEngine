@@ -54,7 +54,7 @@ void DFBaseInputSystem::pushGameEvents(void)
 {
 }
 
-void DFBaseInputSystem::update(void)
+void DFBaseInputSystem::update(float dt)
 {
     for(int i = 0; i < GLFW_KEY_LAST; ++i)
         if(m_keys[i] == GLFW_PRESS)

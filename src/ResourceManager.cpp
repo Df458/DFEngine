@@ -17,6 +17,7 @@ GLuint WIREFRAME_PROGRAM;
 GLuint SPRITE_PROGRAM;
 GLuint PARTICLE_PROGRAM;
 GLuint TEXT_PROGRAM;
+GLuint LETTERBOX_PROGRAM;
 GLuint QUAD_BUFFER;
 GLuint BLANK_TEXTURE;
 
@@ -39,6 +40,7 @@ bool DFBaseResourceManager::initialize(void)
     SPRITE_PROGRAM = glCreateProgram();
     PARTICLE_PROGRAM = glCreateProgram();
     TEXT_PROGRAM = glCreateProgram();
+    LETTERBOX_PROGRAM = glCreateProgram();
     glShaderSource(vertex_shader, 1, WIREFRAME_VERTEX_SHADER, NULL);
     glShaderSource(fragment_shader, 1, WIREFRAME_FRAGMENT_SHADER, NULL);
     if(checkGLError())
@@ -125,10 +127,35 @@ bool DFBaseResourceManager::initialize(void)
     
     glDetachShader(TEXT_PROGRAM, vertex_shader);
     glDetachShader(TEXT_PROGRAM, fragment_shader);
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
     if(checkGLError())
         return false;
+    glShaderSource(vertex_shader, 1, LETTERBOX_VERTEX_SHADER, NULL);
+    glShaderSource(fragment_shader, 1, LETTERBOX_FRAGMENT_SHADER, NULL);
+    if(checkGLError())
+        return false;
+
+    glCompileShader(vertex_shader);
+    glCompileShader(fragment_shader);
+    glAttachShader(LETTERBOX_PROGRAM, vertex_shader);
+    glAttachShader(LETTERBOX_PROGRAM, fragment_shader);
+    glLinkProgram(LETTERBOX_PROGRAM);
+    if(checkGLError())
+        return false;
+    glGetShaderInfoLog(vertex_shader, 1024, &len, log);
+    if(len)
+        printf("Vertex Shader Log\n%s\n", log);
+    glGetShaderInfoLog(fragment_shader, 1024, &len, log);
+    if(len)
+        printf("Fragment Shader Log\n%s\n", log);
+    //exit(0);
+    if(checkGLError())
+        return false;
+    
+    glDetachShader(LETTERBOX_PROGRAM, vertex_shader);
+    glDetachShader(LETTERBOX_PROGRAM, fragment_shader);
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+
 
     glGenBuffers(1, &QUAD_BUFFER);
     glBindBuffer(GL_ARRAY_BUFFER, QUAD_BUFFER);

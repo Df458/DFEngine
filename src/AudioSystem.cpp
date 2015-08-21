@@ -21,6 +21,10 @@ bool AudioSystem::initialize()
     return true;
 }
 
+void AudioSystem::update(float dt)
+{
+}
+
 void AudioSystem::render(void) const
 {
     warn("AudioSystem::render is unimplemented!");

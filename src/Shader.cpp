@@ -34,7 +34,7 @@ void BasicShader::prepareForRender(IScene* scene, IModel* model, glm::mat4 world
     glm::mat4 vp_matrix = scene->getActiveProjectionMatrix() * scene->getActiveViewMatrix();
     glm::mat4 world_matrix_final = scene->getMatrix() * world_matrix;
     glUniformMatrix4fv(m_vp_uniform, 1, GL_FALSE, &vp_matrix[0][0]);
-    glUniformMatrix4fv(m_w_uniform, 1, GL_FALSE, &world_matrix[0][0]);
+    glUniformMatrix4fv(m_w_uniform, 1, GL_FALSE, &world_matrix_final[0][0]);
     glUniform4f(m_color_uniform, 1.0f, 0.7f, 0.0f, 1.0f);
     checkGLError();
 

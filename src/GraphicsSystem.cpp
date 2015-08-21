@@ -65,15 +65,67 @@ bool GraphicsSystem::initialize()
     return true;
 }
 
+void GraphicsSystem::init_letterbox(void)
+{
+    m_letterbox_vertex_attrib = glGetAttribLocation(LETTERBOX_PROGRAM, "vertex_pos");
+    m_letterbox_translation_uniform = glGetUniformLocation(LETTERBOX_PROGRAM, "translation");
+    m_letterbox_scale_uniform = glGetUniformLocation(LETTERBOX_PROGRAM, "scale");
+    m_letterbox_color_uniform = glGetUniformLocation(LETTERBOX_PROGRAM, "color");
+}
+
+void GraphicsSystem::update(float dt)
+{
+}
+
 void GraphicsSystem::render(void) const
 {
-    //glPolygonMode(GL_FRONT, GL_LINE);
-    //glPolygonMode(GL_BACK, GL_LINE);
-    //glClearColor(rand() % 10 / 10.0f, rand() % 10 / 10.0f, rand() % 10 / 10.0f, 1);
     glClearColor(0.4, 0.4, 0.4, 1);
     glEnable(GL_CULL_FACE);
     glDepthFunc(GL_LESS);
     m_active_scene->render();
+    m_physics_debug->batchDrawLines();
+    // TODO: Aspect ratio here
+    glm::vec2 bar = m_active_scene->getViewportRemainder();
+    glm::vec2 size = m_active_scene->getViewportSize();
+    glDisable(GL_DEPTH_TEST);
+    if(bar.x != 0) {
+        glUseProgram(LETTERBOX_PROGRAM);
+        glm::vec3 pos1(-1 + (bar.x / 2) / size.x, 0.0f, 0.0f);
+        glm::vec3 pos2(1 - ((bar.x / 2) / size.x), 0.0f, 0.0f);
+        glm::vec3 scale(bar.x / size.x, 2.0f, 1.0f);
+        glEnableVertexAttribArray(m_letterbox_translation_uniform);
+        glBindBuffer(GL_ARRAY_BUFFER, QUAD_BUFFER);
+        glVertexAttribPointer(m_letterbox_vertex_attrib, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glUniform3fv(m_letterbox_translation_uniform, 1, &pos1[0]);
+        glUniform3fv(m_letterbox_scale_uniform, 1, &scale[0]);
+        glUniform4f(m_letterbox_color_uniform, 0, 0, 0, 1);
+        checkGLError();
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glUniform3fv(m_letterbox_translation_uniform, 1, &pos2[0]);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        checkGLError();
+    } else if(bar.y != 0) {
+        glUseProgram(LETTERBOX_PROGRAM);
+        checkGLError();
+        glm::vec3 pos1(0.0f, -1 + (bar.y / 2) / size.y, 0.0f);
+        glm::vec3 pos2(0.0f, 1 - ((bar.y / 2) / size.y), 0.0f);
+        glm::vec3 scale(2.0f, bar.y / size.y, 1.0f);
+        glEnableVertexAttribArray(m_letterbox_translation_uniform);
+        glBindBuffer(GL_ARRAY_BUFFER, QUAD_BUFFER);
+        glVertexAttribPointer(m_letterbox_vertex_attrib, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        glUniform3fv(m_letterbox_translation_uniform, 1, &pos1[0]);
+        glUniform3fv(m_letterbox_scale_uniform, 1, &scale[0]);
+        glUniform4f(m_letterbox_color_uniform, 0, 0, 0, 1);
+        checkGLError();
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glUniform3fv(m_letterbox_translation_uniform, 1, &pos2[0]);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        checkGLError();
+    }
+    glEnable(GL_DEPTH_TEST);
+
     glfwSwapBuffers(m_main_window);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 }
@@ -105,7 +157,6 @@ void GraphicsSystem::loadSceneFromLevel(const Level* level)
 
 void GraphicsSystem::updateViewportSize(int width, int height)
 {
-    // TODO: Update FBOs
     m_active_scene->updateViewportSize(width, height);
 }
 

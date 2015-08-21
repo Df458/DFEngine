@@ -144,6 +144,7 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     rigid_body->setAngularFactor(angular_fac);
     rigid_body->setLinearVelocity(linear_vel);
     rigid_body->setAngularVelocity(angular_vel);
+    rigid_body->setDamping(mat.linear_damp, mat.angular_damp);
     if(kinematic) {
         rigid_body->setCollisionFlags(rigid_body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
         rigid_body->setActivationState(DISABLE_DEACTIVATION);
@@ -224,7 +225,7 @@ int crigidbody_Index(lua_State* state)
 {
     lua_getfield(state, 1, "instance");
     if(!lua_isuserdata(state, -1))
-        return luaL_error(state, "Trying to access velocity, but the Rigid Body Component is missing its instance!");
+        return luaL_error(state, "Trying to access data, but the Rigid Body Component is missing its instance!");
     CRigidBody* body = *static_cast<CRigidBody**>(lua_touserdata(state, -1));
     lua_pop(state, 1);
 

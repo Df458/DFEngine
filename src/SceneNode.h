@@ -31,6 +31,7 @@ public:
     virtual long getActor(void) const = 0;
     virtual void setTransform(Transform* trans) = 0;
     virtual void setLocalTransform(Transform* trans) = 0;
+    virtual Transform* getLocalTransform(void) const = 0;
     virtual ISceneNode* getParent(void) const = 0;
     virtual const luaL_Reg* getFuncs(void) const = 0;
     virtual const luaL_Reg* getAttrFuncs(void) const = 0;
@@ -127,6 +128,7 @@ public:
     virtual const luaL_Reg* getAttrFuncs(void) const { return u_attr_funcs; }
     void setTransform(Transform* trans) final;
     void setLocalTransform(Transform* trans) final { m_local_transform = trans; }
+    Transform* getLocalTransform(void) const { return m_local_transform; }
 protected:
     void setParent(ISceneNode* parent) final;
     glm::mat4 m_final_transform;
@@ -173,7 +175,7 @@ class CameraSceneNode : public SceneNode
 public:
     CameraSceneNode(void);
     CameraSceneNode(rapidxml::xml_node<>* node);
-    inline const glm::mat4 getProjectionMatrix(void) const { return m_projection; }
+    inline const glm::mat4 getProjectionMatrix(void) const { return m_projection;}
     inline const glm::mat4 getViewMatrix(void) const { return m_view; }
     bool fromXml(rapidxml::xml_node<>* node);
     void reProject(float width, float height);
@@ -183,15 +185,20 @@ public:
     bool getOrtho(void) const { return m_ortho; }
     void setSkyColor(RGBColor color) { m_sky_color = color; }
     virtual const RGBColor& getSkyColor(void) const { return m_sky_color; }
+    glm::vec2 getAspectDifference(void) const;
 private:
     glm::mat4 m_view;
     glm::mat4 m_projection;
+    glm::mat4 m_offset;
     bool m_ortho = false;
     float m_fov;
     float m_near = 0.1;
     float m_far = 1000;
     bool m_active = false;
     RGBColor m_sky_color;
+    glm::vec2 m_desired_dimensions = {1, 1};
+    float m_aspect_ratio = 1;
+    float m_desired_aspect_ratio = 1;
 };
 
 class LightSceneNode : public SceneNode

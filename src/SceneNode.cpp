@@ -200,10 +200,21 @@ CameraSceneNode::CameraSceneNode(xml_node<>* node)
 
 void CameraSceneNode::reProject(float width, float height)
 {
+    m_aspect_ratio = width / height;
+    glm::vec2 dif = getAspectDifference();
+    if(dif.x <= 0)
+        dif.x = 0;
+    if(dif.y <= 0)
+        dif.y = 0;
+
+    m_offset = glm::translate(glm::mat4(1), glm::vec3(dif * glm::vec2(0.5f, -0.5f), 0.0f));
     if(!m_ortho)
-        m_projection = glm::perspective(m_fov, width / height, m_near, m_far);
-    else
-        m_projection = glm::ortho(0.0f, width * g_game->physics()->getWorldScale(), height * g_game->physics()->getWorldScale(), 0.0f, m_near, m_far);
+        m_projection = m_offset * glm::perspective(m_fov, m_aspect_ratio, m_near, m_far);
+    else {
+        glm::vec2 dimensions(width, height);
+        glm::vec2 bdim(width - (height * dif.x), height - (width * dif.y));
+        m_projection = glm::scale(glm::mat4(1), glm::vec3(bdim / m_desired_dimensions, 1.0f)) * glm::ortho(0.0f, dimensions.x * g_game->physics()->getWorldScale(), dimensions.y * g_game->physics()->getWorldScale(), 0.0f, m_near, m_far);
+    }
 }
 
 bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
@@ -217,11 +228,15 @@ bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
                 m_fov = glm::radians(90.0f);
                 attr(projection, "fov", &m_fov);
                 m_projection = glm::perspective(m_fov, 4.0f / 3.0f, m_near, m_far);
+                m_desired_aspect_ratio = 4.0f / 3.0f;
             } else if(!strcmp(p_type->value(), "ortho")) {
                 float width = 1;
                 float height = 1;
                 attr(projection, "width", &width);
                 attr(projection, "height", &height);
+                m_aspect_ratio = width / height;
+                m_desired_aspect_ratio = width / height;
+                m_desired_dimensions = glm::vec2(width, height);
                 m_projection = glm::ortho(0.0f, width, height, 0.0f, m_near, m_far);
                 m_ortho = true;
             } else {
@@ -282,6 +297,14 @@ void CameraSceneNode::lookAt(glm::vec3 target)
     if(u_transform_source)
         self = u_transform_source->getPosition();
     m_view = glm::lookAt(self, target, glm::vec3(0.0f, 1.0f, 0.0f));
+}
+
+glm::vec2 CameraSceneNode::getAspectDifference(void) const
+{
+    glm::vec2 v;
+    v.x = m_aspect_ratio - m_desired_aspect_ratio;
+    v.y = (1/m_aspect_ratio) - (1/m_desired_aspect_ratio);
+    return v;
 }
 
 LightSceneNode::LightSceneNode(void) : SceneNode()

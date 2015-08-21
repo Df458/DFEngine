@@ -42,26 +42,27 @@ static const char* WIREFRAME_FRAGMENT_SHADER[] =
 "gl_FragColor = vec4(color, 1);"
 "}"};
 static const char* SPRITE_VERTEX_SHADER[] =
-{"# version 120\n"
+{"# version 330\n"
 "attribute vec3 vertex_pos;\n"
-"varying vec2 uv;\n"
+"out vec2 uv;\n"
 "uniform vec3 right;\n"
 "uniform vec3 up;\n"
 "uniform vec2 dims;\n"
 "uniform mat4 model_view_projection;\n"
 "void main() {\n"
 "uv = (vertex_pos.xy - vec2(0.5, 0.5)) + 1;\n"// TODO: Might just want to add uvs to the buffer, it's likely cheaper in the long run
-"vec3 wvp = right * vertex_pos.x * dims.x + up * vertex_pos.y * dims.y;\n"
+"vec3 wvp = right * vertex_pos.x * dims.x + -up * vertex_pos.y * dims.y;\n"
 "gl_Position = model_view_projection * vec4(wvp, 1.0);\n"
 "}"};
 static const char* SPRITE_FRAGMENT_SHADER[] =
-{"# version 120\n"
-"varying vec2 uv;\n"
+{"# version 330\n"
+"in vec2 uv;\n"
 "uniform vec4 color;\n"
 "uniform sampler2D texture;\n"
+"out vec4 frag_color;\n"
 "void main() {\n"
-"gl_FragColor = color * texture2D(texture, uv);\n"
-"if(gl_FragColor.a == 0)\n"
+"frag_color = color * texture2D(texture, uv);\n"
+"if(frag_color.a == 0)\n"
 "discard;\n"
 "}"};
 static const char* PARTICLE_VERTEX_SHADER[] =
@@ -90,6 +91,21 @@ static const char* PARTICLE_FRAGMENT_SHADER[] =
 "gl_FragColor = p_color * texture2D(texture, uv);\n"
 "if(gl_FragColor.a == 0)\n"
 "discard;\n"
+"}"};
+static const char* LETTERBOX_VERTEX_SHADER[] =
+{"# version 330\n"
+"attribute vec3 vertex_pos;\n"
+"uniform vec3 translation;\n"
+"uniform vec3 scale;\n"
+"void main() {\n"
+"gl_Position = vec4((vertex_pos * scale) + translation, 1);\n"
+"}"};
+static const char* LETTERBOX_FRAGMENT_SHADER[] =
+{"# version 330\n"
+"uniform vec4 color;\n"
+"out vec4 frag_color;\n"
+"void main() {\n"
+"frag_color = color;\n"
 "}"};
 
 static const char* TEXT_VERTEX_SHADER[] =

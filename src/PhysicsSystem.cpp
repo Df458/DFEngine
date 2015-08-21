@@ -40,6 +40,7 @@ bool PhysicsSystem::initialize()
     m_config = new btDefaultCollisionConfiguration();
     m_dispatcher = new btCollisionDispatcher(m_config);
     m_solver = new btSequentialImpulseConstraintSolver();
+	btGImpactCollisionAlgorithm::registerAlgorithm(m_dispatcher);
     m_physics_world = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_config);
     m_physics_world->setGravity(btVector3(0, -9.8, 0));
     m_physics_world->setInternalTickCallback(physicsTickCallback);
@@ -51,7 +52,7 @@ bool PhysicsSystem::initialize()
     return true;
 }
 
-void PhysicsSystem::step(float delta_time)
+void PhysicsSystem::update(float delta_time)
 {
     m_physics_world->stepSimulation(delta_time);
     m_physics_world->debugDrawWorld();

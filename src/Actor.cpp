@@ -7,6 +7,7 @@
 #include "EventSystem.h"
 #include "Game.h"
 #include "ResourceManager.h"
+#include "TweenSystem.h"
 #include "Util.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -108,6 +109,7 @@ bool Actor::applyTransform(ActorConstructionData* data, Transform* transform)
     if(transform)
         (*m_transform) *= *transform;
 
+    updateTransform();
     return true;
 }
 
@@ -149,13 +151,16 @@ bool Actor::addComponent(IComponent* component)
         m_named_components[component->getName()] = component;
     }
 
+    if(component->get_has_update())
+        m_updating_components.insert(component);
+
     m_components.insert(component);
     return true;
 }
 
 void Actor::update(float delta_time)
 {
-    for(auto i : m_components)
+    for(auto i : m_updating_components)
         i->update(delta_time);
 
     for(auto i = m_collisions.begin(); i != m_collisions.end();) {
@@ -215,6 +220,14 @@ void Actor::addCollision(unsigned long other_id)
 
 void Actor::_destroy(void)
 {
+    if(!g_game->isQuitting()) {
+        for(auto i : m_components) {
+            if(i->getID() == CSCRIPT_ID) {
+                ((CScript*)i)->callDestroy();
+            }
+        }
+    }
+
     ActorDestroyedEvent destroyed_ev(m_id);
     g_game->events()->callEvent(destroyed_ev);
     auto it = m_components.begin();
@@ -306,7 +319,6 @@ int actor_scale(lua_State* state)
     if(lua_gettop(state) >= 5)
         relative = lua_toboolean(state, 5);
 
-    //warn("Transform scaling is currently impossible");
     actor->getTransform()->scale(scale, relative);
     actor->updateTransform();
 
@@ -415,4 +427,119 @@ int actor_transform(lua_State* state)
     lua_setfield(state, -2, "scale");
 
     return 1;
+}
+
+int actor_register_tween(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to register a tween, but the Actor is missing its instance!");
+    Actor* actor = *static_cast<Actor**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    unsigned int actor_id = actor->getID();
+
+    Tween* tween = new Tween();
+    if(lua_gettop(state) == 2) {
+        lua_getfield(state, 2, "start_value");
+        if(lua_isnumber(state, -1))
+            tween->start_value = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "end_value");
+        if(lua_isnumber(state, -1))
+            tween->end_value = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "length");
+        if(lua_isnumber(state, -1))
+            tween->length = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        if(tween->length == 0) {
+            warn("Tween length cannot be 0");
+            tween->length = 1;
+        }
+        lua_getfield(state, 2, "offset");
+        if(lua_isnumber(state, -1))
+            tween->position = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "repeat");
+        if(lua_isboolean(state, -1))
+            tween->repeat = lua_toboolean(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "reverse");
+        if(lua_isboolean(state, -1))
+            tween->reverse = lua_toboolean(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "playing");
+        if(lua_isboolean(state, -1))
+            tween->playing = lua_toboolean(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "transitions");
+        if(lua_istable(state, -1)) {
+            lua_pushnil(state);
+            while(lua_next(state, -1)) {
+                Transition t;
+                lua_getfield(state, 2, "pos");
+                if(lua_isnumber(state, -1))
+                    t.start = lua_tonumber(state, -1);
+                lua_pop(state, 1);
+                // TODO: Get the curve type;
+                tween->transitions.push_back(t);
+                lua_pop(state, 1);
+            }
+        }
+        lua_pop(state, 1);
+    }
+
+    lua_newtable(state);
+    Tween** dat = static_cast<Tween**>(lua_newuserdata(state, sizeof(Tween*)));
+    *dat = tween;
+    lua_setfield(state, -2, "instance");
+    lua_newtable(state);
+    luaL_setfuncs(state, tweenMeta, 0);
+    lua_setmetatable(state, -2);
+
+    g_game->tweens()->tween_map[actor_id].push_back(tween);
+    g_game->tweens()->tweens.insert(tween);
+    return 1;
+}
+
+int actor_get_tween(lua_State* state)
+{
+    return 1;
+}
+
+int actor_index(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access data, but the Actor is missing its instance!");
+    Actor* actor = *static_cast<Actor**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    if(!strcmp(lua_tostring(state, 2), "transform")) {
+        lua_newtable(state);
+        Transform** t = static_cast<Transform**>(lua_newuserdata(state, sizeof(Transform*)));
+        *t = actor->getTransform();
+        lua_setfield(state, -2, "instance");
+        lua_newtable(state);
+        luaL_setfuncs(state, transform_meta, 0);
+        lua_setmetatable(state, -2);
+    } else
+        return 0;
+    return 1;
+}
+
+int actor_newindex(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access data, but the Actor is missing its instance!");
+    Actor* actor = *static_cast<Actor**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    if(!strcmp(lua_tostring(state, 2), "transform")) {
+        lua_settop(state, 3);
+        actor->m_transform->setWorldTransform(state);
+    }
+    return 0;
 }
