@@ -207,13 +207,16 @@ void CameraSceneNode::reProject(float width, float height)
     if(dif.y <= 0)
         dif.y = 0;
 
-    m_offset = glm::translate(glm::mat4(1), glm::vec3(dif * glm::vec2(0.5f, -0.5f), 0.0f));
+    //fprintf(stderr, "%f, %f\n", dif.x * 0.5f, dif.y * -0.5f);
     if(!m_ortho)
         m_projection = m_offset * glm::perspective(m_fov, m_aspect_ratio, m_near, m_far);
     else {
         glm::vec2 dimensions(width, height);
         glm::vec2 bdim(width - (height * dif.x), height - (width * dif.y));
-        m_projection = glm::scale(glm::mat4(1), glm::vec3(bdim / m_desired_dimensions, 1.0f)) * glm::ortho(0.0f, dimensions.x * g_game->physics()->getWorldScale(), dimensions.y * g_game->physics()->getWorldScale(), 0.0f, m_near, m_far);
+        m_offset = glm::translate(glm::mat4(1), glm::vec3(dif.x * height * 0.5f, dif.y * width * 0.5f, 0.0f) * g_game->physics()->getWorldScale());
+        bdim /= m_desired_dimensions;
+        //fprintf(stderr, "%f, %f\n", bdim.x, bdim.y);
+        m_projection = glm::ortho(0.0f, dimensions.x * g_game->physics()->getWorldScale(), dimensions.y * g_game->physics()->getWorldScale(), 0.0f, m_near, m_far) * glm::scale(glm::mat4(1), glm::vec3(bdim, 1.0f)) * m_offset;
     }
 }
 

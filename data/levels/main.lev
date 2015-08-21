@@ -8,6 +8,6 @@
         <script name="level" id="level_manager"/>
     </actor>
     <actor id="bat" persistent="true">
-        <translate x="0" y="14"/>
+        <translate x="0" y="12"/>
     </actor>
 </level>
