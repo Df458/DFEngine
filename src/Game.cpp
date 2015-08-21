@@ -187,11 +187,11 @@ void Game::cleanup(void)
     m_audio->cleanup();
     delete m_audio;
 
-    m_tweens->cleanup();
-    delete m_tweens;
-
     m_actors->cleanup();
     delete m_actors;
+
+    m_tweens->cleanup();
+    delete m_tweens;
 
     m_physics->cleanup();
     delete m_physics;
