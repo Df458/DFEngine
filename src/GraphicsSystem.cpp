@@ -160,6 +160,16 @@ void GraphicsSystem::updateViewportSize(int width, int height)
     m_active_scene->updateViewportSize(width, height);
 }
 
+glm::vec2 GraphicsSystem::getViewportSize() const
+{
+    return m_active_scene->getViewportSize();
+}
+
+glm::vec2 GraphicsSystem::getViewportOffset() const
+{
+    return m_active_scene->getViewportRemainder();
+}
+
 void closeCallback(GLFWwindow* win)
 {
     g_game->quit();

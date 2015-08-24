@@ -1,13 +1,16 @@
 <level world_scale="0.02">
-    <actor name="manager" persistent="true">
+    <actor name="camera">
         <translate z="-3"/>
         <camera name="camera">
-            <projection type="ortho" width="600" height="600" near="0.1" far="100"/>
+            <projection type="ortho" width="640" height="640" near="0.1" far="100"/>
             <lookat />
         </camera>
-        <script name="level" id="level_manager"/>
     </actor>
-    <actor id="bat" persistent="true">
-        <translate x="0" y="12"/>
+    <actor>
+        <translate x="-4" y="5"/>
+        <graphics>
+            <sprite id="Title"/>
+        </graphics>
+        <script id="title"/>
     </actor>
 </level>

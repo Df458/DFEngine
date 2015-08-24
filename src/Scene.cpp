@@ -397,4 +397,11 @@ void Scene::deleteRecursive(unsigned long id)
                 m_root_node->removeChild(node);
         }
     }
+
+    if(m_camera_nodes.find(id) != m_camera_nodes.end()) {
+        m_camera_nodes.erase(id);
+        if(m_camera_nodes[id]->getActive())
+            m_active_camera = NULL;
+    }
+    m_light_nodes.erase(id);
 }

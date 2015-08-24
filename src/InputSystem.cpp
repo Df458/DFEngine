@@ -142,7 +142,7 @@ int input_mousestate(lua_State* state)
 
 int input_mouseposition(lua_State* state)
 {
-    glm::vec2 position = g_game->input()->getMousePosition();
+    glm::vec2 position = (g_game->input()->getMousePosition() - (g_game->graphics()->getViewportOffset() * 0.5f)) / (g_game->graphics()->getViewportSize() - g_game->graphics()->getViewportOffset());
     lua_pushnumber(state, position.x);
     lua_pushnumber(state, position.y);
     return 2;

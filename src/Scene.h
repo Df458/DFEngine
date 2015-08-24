@@ -83,8 +83,8 @@ private:
 
     ISceneNode* m_root_node;
     CameraSceneNode* m_active_camera = nullptr;
-    std::set<LightSceneNode*> m_light_nodes;
-    std::set<CameraSceneNode*> m_camera_nodes;
+    std::map<unsigned long, LightSceneNode*> m_light_nodes;
+    std::map<unsigned long, CameraSceneNode*> m_camera_nodes;
     std::map<unsigned long, std::set<ISceneNode*>> m_actor_nodes;
     MatrixStack m_matrices;
     glm::vec2 m_view_dims;
