@@ -86,6 +86,17 @@ Actor* ActorSystem::getActor(const char* name) const
     return NULL;
 }
 
+std::vector<Actor*> ActorSystem::getActors(const char* name) const
+{
+    std::vector<Actor*> actors;
+    for(auto i = m_actors.begin(); i != m_actors.end(); ++i) {
+        if(i->second->getName() == name)
+            actors.push_back(i->second);
+    }
+
+    return actors;
+}
+
 Actor* ActorSystem::getLastActor() const
 {
     if(m_actors.find(last_id - 1) == m_actors.end()) {

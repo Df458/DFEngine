@@ -294,8 +294,6 @@ int game_get_actor(lua_State* state)
     else
         actor = g_game->actors()->getActor(lua_tostring(state, 1));
     if(!actor) {
-        // TODO: Error here
-        warn("Trying to retrieve an actor that doesn't exist!");
         return 0;
     }
 
@@ -304,6 +302,28 @@ int game_get_actor(lua_State* state)
     Actor** actordat = static_cast<Actor**>(lua_newuserdata(state, sizeof(Actor*)));
     *actordat = actor;
     lua_setfield(state, -2, "instance");
+
+    return 1;
+}
+
+int game_get_actors(lua_State* state)
+{
+    std::vector<Actor*> actors;
+    actors = g_game->actors()->getActors(lua_tostring(state, 1));
+    if(actors.size() == 0) {
+        return 0;
+    }
+
+    lua_createtable(state, actors.size(), 0);
+    for(unsigned long i = 0; i < actors.size(); ++i) {
+        lua_pushinteger(state, i);
+        lua_newtable(state);
+        luaL_setfuncs(state, actor_funcs, 0);
+        Actor** actordat = static_cast<Actor**>(lua_newuserdata(state, sizeof(Actor*)));
+        *actordat = actors[i];
+        lua_setfield(state, -2, "instance");
+        lua_settable(state, -3);
+    }
 
     return 1;
 }

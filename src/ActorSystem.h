@@ -7,6 +7,7 @@ extern "C" {
 }
 #include <map>
 #include <set>
+#include <vector>
 
 class Actor;
 class ActorConstructionData;
@@ -24,6 +25,7 @@ public:
 
     Actor* getActor(unsigned long id) const;
     Actor* getActor(const char* name) const;
+    std::vector<Actor*> getActors(const char* name) const;
     Actor* getLastActor() const;
     Actor* createActor(ActorConstructionData* actor_data, Transform* transform = NULL);
     Actor* createActor(std::string name, Transform* transform = NULL);
