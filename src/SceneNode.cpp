@@ -103,6 +103,14 @@ bool SceneNode::fromXml(rapidxml::xml_node<>* node)
         attr(tr, "z", &rotation.z);
         m_local_transform->rotate(rotation);
     }
+
+    if(xml_node<>* tr = node->first_node("scale", 5, false)) {
+        glm::vec3 scale(1, 1, 1);
+        attr(tr, "x", &scale.x);
+        attr(tr, "y", &scale.y);
+        attr(tr, "z", &scale.z);
+        m_local_transform->scale(scale);
+    }
     return true;
 }
 
@@ -748,7 +756,7 @@ TextSceneNode::TextSceneNode(IFont* font, const char* text, RenderPass pass) : S
 void TextSceneNode::draw(IScene* scene, RenderPass pass)
 {
     m_final_transform = scene->getMatrix() * u_transform_source->getWorldTransform() * m_local_transform->getWorldTransform();
-    u_font->draw(scene, m_text.c_str(), m_final_transform);
+    u_font->draw(scene, m_text.c_str(), m_final_transform, m_size, m_color);
 }
 
 bool TextSceneNode::fromXml(rapidxml::xml_node<>* node)
@@ -970,5 +978,40 @@ int text_text(lua_State* state)
         return 0;
     } else
         lua_pushstring(state, node->getText().c_str());
+    return 1;
+}
+
+int text_color(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access text, but the Text Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    TextSceneNode* node = (TextSceneNode*)gfx->getNode();
+    RGBColor color;
+    if(lua_gettop(state) > 1) {
+        lua_getfield(state, 2, "r");
+        color.x = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "g");
+        color.y = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "b");
+        color.z = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        node->setColor(color);
+        return 0;
+    }
+    color = node->getColor();
+    lua_newtable(state);
+    lua_pushnumber(state, color.x);
+    lua_setfield(state, -2, "r");
+    lua_pushnumber(state, color.y);
+    lua_setfield(state, -2, "g");
+    lua_pushnumber(state, color.z);
+    lua_setfield(state, -2, "b");
+    return 1;
     return 1;
 }

@@ -16,6 +16,7 @@ class IEvent;
 
 enum class CurveType
 {
+    NONE,
     LINEAR,
     EASE_IN,
     EASE_OUT,
@@ -24,6 +25,9 @@ enum class CurveType
 struct Transition
 {
     float start = 0;
+    float end = 1;
+    float start_value = 0;
+    float end_value = 1;
     CurveType type = CurveType::LINEAR;
 };
 
@@ -35,6 +39,7 @@ struct Tween
     float end_value = 1;
     float current_value = 0;
     float length = 1;
+    unsigned current_transition = 0;
     bool repeat = false;
     bool playing = true;
     bool reverse = false;

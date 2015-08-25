@@ -54,6 +54,7 @@ int particle_spawning(lua_State* state);
 int particle_count(lua_State* state);
 
 int text_text(lua_State* state);
+int text_color(lua_State* state);
 
 const luaL_Reg node_default_funcs[] =
 {
@@ -101,6 +102,7 @@ const luaL_Reg node_text_attr[] =
 {
     {"render", node_render},
     {"text", text_text},
+    {"color", text_color},
     {0, 0}
 };
 
@@ -320,11 +322,15 @@ public:
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool fromXml(rapidxml::xml_node<>* node);
     virtual bool getVisible(void);
+    void setColor(RGBColor color) { m_color = color; }
+    RGBColor getColor(void) { return m_color; }
     void setText(const char* text) { m_text = text; }
     std::string getText(void) { return m_text; }
 protected:
     std::string m_text = "";
     IFont* u_font = NULL;
+    RGBColor m_color = Color::White;
+    float m_size = 16;
 };
 
 #endif

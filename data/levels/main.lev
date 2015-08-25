@@ -7,9 +7,17 @@
         </camera>
     </actor>
     <actor>
-        <translate x="-4" y="5"/>
+        <translate x="-13" y="13"/>
         <graphics>
-            <sprite id="Title"/>
+            <sprite id="Title">
+                <scale x="2" y="2"/>
+            </sprite>
+        </graphics>
+        <graphics name="start">
+            <text value="Click to Begin" font="Audiowide-Regular">
+                <translate x="1"/>
+                <scale x="3" y="3"/>
+            </text>
         </graphics>
         <script id="title"/>
     </actor>

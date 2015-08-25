@@ -157,6 +157,8 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     rigid_body->setUserPointer(actor);
     CRigidBodyCreatedEvent created_ev(rigid_body, actor->getID());
     g_game->events()->callEvent(created_ev);
+    component->m_body->getBroadphaseProxy()->m_collisionFilterMask = mask;
+    component->m_body->getBroadphaseProxy()->m_collisionFilterGroup = group;
 
     return component;
 }
@@ -186,8 +188,6 @@ btRigidBody* CRigidBodyCreatedEvent::getBody(void) const
 
 void CRigidBody::init(void)
 {
-    m_body->getBroadphaseProxy()->m_collisionFilterMask = m_mask;
-    m_body->getBroadphaseProxy()->m_collisionFilterGroup = m_group;
 }
 
 void CRigidBody::destroy(void)

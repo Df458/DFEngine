@@ -461,7 +461,7 @@ int actor_register_tween(lua_State* state)
         if(lua_isnumber(state, -1))
             tween->position = lua_tonumber(state, -1);
         lua_pop(state, 1);
-        lua_getfield(state, 2, "repeat");
+        lua_getfield(state, 2, "loop");
         if(lua_isboolean(state, -1))
             tween->repeat = lua_toboolean(state, -1);
         lua_pop(state, 1);
@@ -473,22 +473,47 @@ int actor_register_tween(lua_State* state)
         if(lua_isboolean(state, -1))
             tween->playing = lua_toboolean(state, -1);
         lua_pop(state, 1);
-        lua_getfield(state, 2, "transitions");
+        lua_getfield(state, 2, "segments");
         if(lua_istable(state, -1)) {
             lua_pushnil(state);
-            while(lua_next(state, -1)) {
+            while(lua_next(state, -2)) {
                 Transition t;
-                lua_getfield(state, 2, "pos");
-                if(lua_isnumber(state, -1))
+                lua_getfield(state, -1, "position");
+                if(lua_isnumber(state, -1)) 
                     t.start = lua_tonumber(state, -1);
                 lua_pop(state, 1);
-                // TODO: Get the curve type;
+                lua_getfield(state, -1, "curve");
+                if(lua_isstring(state, -1)) {
+                    const char* str = lua_tostring(state, -1);
+                    if(!strcmp(str, "none")) {
+                        t.type = CurveType::NONE;
+                    } else if(!strcmp(str, "linear"))
+                        t.type = CurveType::LINEAR;
+                    else if(!strcmp(str, "ease_in"))
+                        t.type = CurveType::EASE_IN;
+                    else if(!strcmp(str, "ease_out"))
+                        t.type = CurveType::EASE_OUT;
+                }
+                lua_pop(state, 1);
+                lua_getfield(state, -1, "value");
+                if(lua_isnumber(state, -1))
+                    t.start_value = lua_tonumber(state, -1);
+                lua_pop(state, 1);
+                if(tween->transitions.size() > 0) {
+                    tween->transitions[tween->transitions.size() - 1].end = t.start;
+                    tween->transitions[tween->transitions.size() - 1].end_value = t.start_value;
+                }
                 tween->transitions.push_back(t);
                 lua_pop(state, 1);
             }
         }
         lua_pop(state, 1);
     }
+
+    if(tween->transitions.size() == 0)
+        tween->transitions.push_back(Transition());
+    tween->transitions[0].start_value = tween->start_value;
+    tween->transitions[tween->transitions.size() - 1].end_value = tween->end_value;
 
     lua_newtable(state);
     Tween** dat = static_cast<Tween**>(lua_newuserdata(state, sizeof(Tween*)));
