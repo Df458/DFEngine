@@ -440,6 +440,7 @@ int actor_register_tween(lua_State* state)
     unsigned int actor_id = actor->getID();
 
     Tween* tween = new Tween();
+    CurveType default_curve = CurveType::LINEAR;
     if(lua_gettop(state) == 2) {
         lua_getfield(state, 2, "start_value");
         if(lua_isnumber(state, -1))
@@ -472,6 +473,19 @@ int actor_register_tween(lua_State* state)
         lua_getfield(state, 2, "playing");
         if(lua_isboolean(state, -1))
             tween->playing = lua_toboolean(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, -1, "curve");
+        if(lua_isstring(state, -1)) {
+            const char* str = lua_tostring(state, -1);
+            if(!strcmp(str, "none")) {
+                default_curve = CurveType::NONE;
+            } else if(!strcmp(str, "linear"))
+                default_curve = CurveType::LINEAR;
+            else if(!strcmp(str, "ease_in"))
+                default_curve = CurveType::EASE_IN;
+            else if(!strcmp(str, "ease_out"))
+                default_curve = CurveType::EASE_OUT;
+        }
         lua_pop(state, 1);
         lua_getfield(state, 2, "segments");
         if(lua_istable(state, -1)) {
@@ -510,8 +524,10 @@ int actor_register_tween(lua_State* state)
         lua_pop(state, 1);
     }
 
-    if(tween->transitions.size() == 0)
+    if(tween->transitions.size() == 0) {
         tween->transitions.push_back(Transition());
+        tween->transitions[0].type = default_curve;
+    }
     tween->transitions[0].start_value = tween->start_value;
     tween->transitions[0].start = 0;
     tween->transitions[tween->transitions.size() - 1].end_value = tween->end_value;

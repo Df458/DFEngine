@@ -9,4 +9,7 @@ void _error(const char* file, unsigned line, std::string message, bool to_exit =
 
 char* loadFileContents(std::string filepath);
 
+#define PI 3.14159265
+#define DEGTORAD PI / 180.0
+
 #endif

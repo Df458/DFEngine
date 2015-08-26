@@ -43,18 +43,26 @@ void TweenSystem::update(float dt)
                 j->current_transition++;
             }
             if(j->transitions[j->current_transition].start_value - j->transitions[j->current_transition].end_value != 0) {
+                Transition t = j->transitions[j->current_transition];
+                float start = t.start_value;
+                float end = t.end_value;
+                float position = (j->position / j->length) - t.start;
+                float length = t.end - t.start;
                 switch(j->transitions[j->current_transition].type) {
                     case CurveType::NONE:
-                        j->current_value = j->transitions[j->current_transition].start_value;
+                        j->current_value = start;
                         break;
                     case CurveType::LINEAR:
-                        j->current_value = (((j->position / j->length) - j->transitions[j->current_transition].start)
-                        / (j->transitions[j->current_transition].end - j->transitions[j->current_transition].start))
-                        * (j->transitions[j->current_transition].end_value - j->transitions[j->current_transition].start_value)
-                        + j->transitions[j->current_transition].start_value;
+                        j->current_value = (position / length) * (end - start) + start;
+                    break;
+                    case CurveType::EASE_IN:
+                        j->current_value = (1 - cos(position / length * 90 * DEGTORAD)) * (end - start) + start;
+                    break;
+                    case CurveType::EASE_OUT:
+                        j->current_value = (sin(position / length * 90 * DEGTORAD)) * (end - start) + start;
                     break;
                     default:
-                        j->current_value = j->transitions[j->current_transition].start_value;
+                        j->current_value = start;
                         break;
                 }
             } else
