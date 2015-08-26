@@ -23,18 +23,24 @@ void TweenSystem::update(float dt)
                 j->position += dt * (j->reverse ? -1 : 1);
             }
             while(!j->reverse && j->position > j->length) {
-                if(j->repeat)
+                if(j->repeat) {
                     j->position -= j->length;
-                else
+                    j->current_transition = 0;
+                } else {
                     j->position = j->length;
-                j->current_transition = 0;
+                    j->current_transition = j->transitions.size() - 1;
+                    j->playing = false;
+                }
             }
             while(j->reverse && j->position < 0) {
-                if(j->repeat)
+                if(j->repeat) {
                     j->position += j->length;
-                else
+                    j->current_transition = j->transitions.size() - 1;
+                } else {
                     j->position = 0;
-                j->current_transition = 0;
+                    j->current_transition = 0;
+                    j->playing = false;
+                }
             }
             while(!j->reverse && j->position < j->length && j->position / j->length > j->transitions[j->current_transition].end) {
                 j->current_transition++;

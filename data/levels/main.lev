@@ -3,6 +3,7 @@
         <translate z="-3"/>
         <camera name="camera">
             <projection type="ortho" width="640" height="640" near="0.1" far="100"/>
+            <sky_color r="0.05" g="0.1" b="0.3"/>
             <lookat />
         </camera>
     </actor>
@@ -16,9 +17,31 @@
         <graphics name="start">
             <text value="Click to Begin" font="Audiowide-Regular">
                 <translate x="1"/>
-                <scale x="3" y="3"/>
+                <scale x="3" y="-3"/>
             </text>
         </graphics>
         <script id="title"/>
+    </actor>
+    <actor persistent="true">
+        <translate x="-1" y="20"/>
+        <graphics name="text">
+            <text value="Press H for help" font="Audiowide-Regular">
+                <translate y="-1.6"/>
+                <scale x="3" y="-3"/>
+            </text>
+        </graphics>
+        <graphics name="help">
+            <text value="LMB/RMB/MMB: Fire left/up/right
+Escape: Exit game
+H: Toggle controls
+
+
+Please send criticism, bug reports, questions,
+and other assorted comments to <hugues. ross@gmail. com>.
+For more games, visit df458. blogspot. com." font="Audiowide-Regular" renders="false">
+                <scale x="3" y="-3"/>
+            </text>
+        </graphics>
+        <script id="help_text"/>
     </actor>
 </level>

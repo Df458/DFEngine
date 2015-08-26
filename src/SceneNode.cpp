@@ -755,6 +755,8 @@ TextSceneNode::TextSceneNode(IFont* font, const char* text, RenderPass pass) : S
 
 void TextSceneNode::draw(IScene* scene, RenderPass pass)
 {
+    if(pass != m_render_pass || !m_renders)
+        return;
     m_final_transform = scene->getMatrix() * u_transform_source->getWorldTransform() * m_local_transform->getWorldTransform();
     u_font->draw(scene, m_text.c_str(), m_final_transform, m_size, m_color);
 }

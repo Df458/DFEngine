@@ -115,14 +115,14 @@ void fileDropCallback(GLFWwindow* window, int file_count, const char** file_list
 
 int input_keystate(lua_State* state)
 {
-    if(lua_isstring(state, 1)) {
+    if(lua_isinteger(state, 1)) {
+        int key_id = lua_tointeger(state, 1);
+        lua_pushinteger(state, g_game->input()->getKeyState(key_id));
+    } else if(lua_isstring(state, 1)) {
         char key_char = lua_tostring(state, 1)[0];
         if(key_char >= 97 && key_char <= 122)
             key_char -= 32;
         lua_pushinteger(state, g_game->input()->getKeyState(key_char));
-    } else if(lua_isinteger(state, 1)) {
-        int key_id = lua_tointeger(state, 1);
-        lua_pushinteger(state, g_game->input()->getKeyState(key_id));
     } else {
         return luaL_error(state, "keystate expects a char or int.");
     }
