@@ -42,11 +42,11 @@ void TweenSystem::update(float dt)
                     j->playing = false;
                 }
             }
-            while(!j->reverse && j->position < j->length && j->position / j->length > j->transitions[j->current_transition].end) {
+            while(j->position < j->length && j->position / j->length > j->transitions[j->current_transition].end) {
                 j->current_transition++;
             }
-            while(j->reverse && j->position > 0 && j->position / j->length < j->transitions[j->current_transition].start) {
-                j->current_transition++;
+            while(j->position / j->length < j->transitions[j->current_transition].start) {
+                j->current_transition--;
             }
             if(j->transitions[j->current_transition].start_value - j->transitions[j->current_transition].end_value != 0) {
                 Transition t = j->transitions[j->current_transition];
