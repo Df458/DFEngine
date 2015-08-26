@@ -513,7 +513,9 @@ int actor_register_tween(lua_State* state)
     if(tween->transitions.size() == 0)
         tween->transitions.push_back(Transition());
     tween->transitions[0].start_value = tween->start_value;
+    tween->transitions[0].start = 0;
     tween->transitions[tween->transitions.size() - 1].end_value = tween->end_value;
+    tween->transitions[tween->transitions.size() - 1].end = 1;
 
     lua_newtable(state);
     Tween** dat = static_cast<Tween**>(lua_newuserdata(state, sizeof(Tween*)));

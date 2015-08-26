@@ -140,6 +140,8 @@ ComponentID CScript::getID(void)
 void CScript::processCollision(char collision_type, unsigned long other_id)
 {
     *m_other_actor = g_game->actors()->getActor(other_id);
+    if(!*m_other_actor || !(*m_other_actor)->getAlive())
+        return;
     lua_getglobal(m_state, collision_strs[collision_type - 1]);
     if(!lua_isfunction(m_state, -1))
         lua_pop(m_state, 1);

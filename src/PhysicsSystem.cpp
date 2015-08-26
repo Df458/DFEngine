@@ -88,6 +88,6 @@ void PhysicsSystem::CRigidBodyCreatedCallback(const IEvent& event)
         return;
     }
     const CRigidBodyCreatedEvent* e = dynamic_cast<const CRigidBodyCreatedEvent*>(&event);
-    m_physics_world->addRigidBody(e->getBody());
+    m_physics_world->addRigidBody(e->getBody(), e->getMask(), e->getGroup());
     u_rigid_bodies.emplace(e->getId(), e->getBody());
 }

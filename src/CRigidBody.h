@@ -53,15 +53,19 @@ protected:
 class CRigidBodyCreatedEvent : public IEvent
 {
     public:
-        CRigidBodyCreatedEvent(btRigidBody* body, unsigned long id);
+        CRigidBodyCreatedEvent(btRigidBody* body, int mask, int group, unsigned long id);
         virtual const EventType& getEventType (void) const;
         btRigidBody* getBody(void) const;
         unsigned long getId(void) const;
+        int getMask(void) const { return m_mask; }
+        int getGroup(void) const { return m_group; }
 
         static const EventType m_type;
     private:
         btRigidBody* u_body;
         unsigned long m_id;
+        int m_mask = -1;
+        int m_group = -1;
 };
 
 #endif

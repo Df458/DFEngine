@@ -19,8 +19,9 @@ void TweenSystem::update(float dt)
 {
     for(auto i : tween_map) {
         for(auto j : i.second) {
-            if(j->playing)
+            if(j->playing) {
                 j->position += dt * (j->reverse ? -1 : 1);
+            }
             while(!j->reverse && j->position > j->length) {
                 if(j->repeat)
                     j->position -= j->length;
@@ -35,10 +36,10 @@ void TweenSystem::update(float dt)
                     j->position = 0;
                 j->current_transition = 0;
             }
-            while(!j->reverse && j->position / j->length > j->transitions[j->current_transition].end) {
+            while(!j->reverse && j->position < j->length && j->position / j->length > j->transitions[j->current_transition].end) {
                 j->current_transition++;
             }
-            while(j->reverse && j->position / j->length < j->transitions[j->current_transition].start) {
+            while(j->reverse && j->position > 0 && j->position / j->length < j->transitions[j->current_transition].start) {
                 j->current_transition++;
             }
             if(j->transitions[j->current_transition].start_value - j->transitions[j->current_transition].end_value != 0) {
@@ -47,7 +48,10 @@ void TweenSystem::update(float dt)
                         j->current_value = j->transitions[j->current_transition].start_value;
                         break;
                     case CurveType::LINEAR:
-                        j->current_value = (((j->position / j->length) - j->transitions[j->current_transition].start) / (j->transitions[j->current_transition].end - j->transitions[j->current_transition].start)) * (j->transitions[j->current_transition].end_value - j->transitions[j->current_transition].start_value) + j->transitions[j->current_transition].start_value;
+                        j->current_value = (((j->position / j->length) - j->transitions[j->current_transition].start)
+                        / (j->transitions[j->current_transition].end - j->transitions[j->current_transition].start))
+                        * (j->transitions[j->current_transition].end_value - j->transitions[j->current_transition].start_value)
+                        + j->transitions[j->current_transition].start_value;
                     break;
                     default:
                         j->current_value = j->transitions[j->current_transition].start_value;
@@ -92,6 +96,8 @@ int tweenIndex(lua_State* state)
 
     if(!strcmp(lua_tostring(state, 2), "value")) {
         lua_pushnumber(state, tween->current_value);
+    } else if(!strcmp(lua_tostring(state, 2), "position")) {
+        lua_pushnumber(state, tween->position);
     } else if(!strcmp(lua_tostring(state, 2), "start_value")) {
         lua_pushnumber(state, tween->start_value);
     } else if(!strcmp(lua_tostring(state, 2), "end_value")) {
