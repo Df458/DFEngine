@@ -70,6 +70,7 @@ int game_debug_render(lua_State* state);
 int game_get_actor(lua_State* state);
 int game_get_actors(lua_State* state);
 int game_load_level(lua_State* state);
+int game_get_data_path(lua_State* state);
 
 const luaL_Reg game_funcs[] =
 {
@@ -78,6 +79,7 @@ const luaL_Reg game_funcs[] =
     {"get_actors", game_get_actors},
     {"debug_render", game_debug_render},
     {"load_level", game_load_level},
+    {"get_data_path", game_get_data_path},
     {"exit", game_exit},
     {0, 0}
 };

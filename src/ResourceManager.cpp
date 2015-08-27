@@ -528,7 +528,7 @@ StaticActorConstructionData* DFBaseResourceManager::_loadActor(std::string id)
         warn("Trying to load an actor that already exists.");
         return m_actors[id];
     }
-    char* filedata = loadFileContents(id);
+    char* filedata = loadFileContents(getPath() + "/" + id);
     if(!filedata)
         return NULL;
 
@@ -547,7 +547,7 @@ ISound* DFBaseResourceManager::_loadAudio(std::string id)
     }
 
     ISound* snd = new SoundEffect();
-    if(!snd->load(id.c_str(), SoundFile::WAV)) {
+    if(!snd->load((getPath() + "/" + id).c_str(), SoundFile::WAV)) {
         delete snd;
         return NULL;
     }
@@ -564,7 +564,7 @@ ISound* DFBaseResourceManager::_loadAudioStream(std::string id)
     }
 
     ISound* snd = new SoundStream();
-    if(!snd->load(id.c_str(), SoundFile::OGG)) {
+    if(!snd->load((getPath() + "/" + id).c_str(), SoundFile::OGG)) {
         delete snd;
         return NULL;
     }
@@ -580,7 +580,7 @@ IFont* DFBaseResourceManager::_loadFont(std::string id)
         return m_fonts[id];
     }
 
-    Font* font = new Font(id.c_str(), m_font_library);
+    Font* font = new Font((getPath() + "/" + id).c_str(), m_font_library);
     if(font->failedLoad()) {
         delete font;
         return 0;
@@ -597,7 +597,7 @@ Level* DFBaseResourceManager::_loadLevel(std::string id)
         warn("Trying to load an level that already exists.");
         return m_levels[id];
     }
-    char* filedata = loadFileContents(id);
+    char* filedata = loadFileContents((getPath() + "/" + id));
     if(!filedata)
         return NULL;
 
@@ -614,7 +614,7 @@ IModel* DFBaseResourceManager::_loadModel(std::string id, std::string name)
         warn("Trying to load an model that already exists.");
         return m_models[id];
     }
-    char* filedata = loadFileContents(id);
+    char* filedata = loadFileContents(getPath() + "/" + id);
     if(!filedata)
         return NULL;
 
@@ -632,7 +632,7 @@ PhysicsMaterial DFBaseResourceManager::_loadPhysicsMaterial(std::string id)
         warn("Trying to load an physics material that already exists.");
         return m_physics_materials[id];
     }
-    char* filedata = loadFileContents(id);
+    char* filedata = loadFileContents(getPath() + "/" + id);
     if(!filedata)
         return NULL;
 
@@ -657,11 +657,11 @@ GLuint DFBaseResourceManager::_loadProgram(std::string id)
         warn("Trying to load a shader program that already exists.");
         return m_programs[id];
     }
-    char* vertex_filedata = loadFileContents(id + VERTEX_SHADER_SUFFIX);
+    char* vertex_filedata = loadFileContents(getPath() + "/" + id + VERTEX_SHADER_SUFFIX);
     if(!vertex_filedata)
         return 0;
 
-    char* fragment_filedata = loadFileContents(id + FRAGMENT_SHADER_SUFFIX);
+    char* fragment_filedata = loadFileContents(getPath() + "/" + id + FRAGMENT_SHADER_SUFFIX);
     if(!fragment_filedata) {
         delete vertex_filedata;
         return 0;
@@ -714,11 +714,11 @@ IShader* DFBaseResourceManager::_loadShader(std::string id, std::string name)
         warn("Trying to load a shader that already exists.");
         return m_shaders[id];
     }
-    char* vertex_filedata = loadFileContents(id + VERTEX_SHADER_SUFFIX);
+    char* vertex_filedata = loadFileContents(getPath() + "/" + id + VERTEX_SHADER_SUFFIX);
     if(!vertex_filedata)
         return NULL;
 
-    char* fragment_filedata = loadFileContents(id + FRAGMENT_SHADER_SUFFIX);
+    char* fragment_filedata = loadFileContents(getPath() + "/" + id + FRAGMENT_SHADER_SUFFIX);
     if(!fragment_filedata) {
         delete vertex_filedata;
         return NULL;
@@ -775,7 +775,7 @@ Material* DFBaseResourceManager::_loadShaderMaterial(std::string id)
         return m_shader_materials[id];
     }
 
-    FILE* file = fopen(id.c_str(), "rb");
+    FILE* file = fopen((getPath() + "/" + id).c_str(), "rb");
     if(!file) {
         warn("Could not open file."); // TODO: Make this more descriptive
         return 0;
@@ -792,7 +792,7 @@ char* DFBaseResourceManager::_loadScript(std::string id)
         warn("Trying to load a script that already exists.");
         return m_scripts[id];
     }
-    char* script = loadFileContents(id + SCRIPT_SUFFIX);
+    char* script = loadFileContents(getPath() + "/" + id + SCRIPT_SUFFIX);
     if(!script) // TODO: Add a warning here
         return NULL;
     m_scripts.emplace(id, script);
@@ -811,7 +811,7 @@ Texture* DFBaseResourceManager::_loadTexture(std::string id, std::string name)
 	glGenTextures(1, &texture->texture_handle);
 	glBindTexture(GL_TEXTURE_2D, texture->texture_handle);
 	
-	FILE* infile = fopen(id.c_str(), "rb");
+	FILE* infile = fopen((getPath() + "/" + id).c_str(), "rb");
 	if(!infile) {
 		warn("Could not open file.");
 		return 0;

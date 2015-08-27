@@ -12,6 +12,7 @@
 #include "PhysicsRenderer.h"
 #include "PhysicsSystem.h"
 #include "ResourceManager.h"
+#include "ResourceDefines.h"
 #include "RenderUtil.h"
 #include "Scene.h"
 #include "Sound.h"
@@ -357,4 +358,10 @@ int game_debug_render(lua_State* state)
         g_game->graphics()->getPhysicsDebug()->setDebugMode(0);
     //g_game->graphics()->getPhysicsDebug()->setDebugMode(btIDebugDraw::DBG_DrawText);
     return 0;
+}
+
+int game_get_data_path(lua_State* state)
+{
+    lua_pushstring(state, (getPath() + "/" + DATA_PATH).c_str());
+    return 1;
 }

@@ -82,7 +82,8 @@ Actor* ActorSystem::getActor(const char* name) const
             return i->second;
     }
 
-    warn("Requesting an Actor that doesn't exist.");
+    //warn("Requesting an Actor that doesn't exist.");
+    //fprintf(stderr, "Actor name: %s\n", name);
     return NULL;
 }
 

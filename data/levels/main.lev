@@ -11,6 +11,7 @@
         <graphics name="logo">
             <sprite id="dfEngine">
                 <color a="0"/>
+                <scale x="2.0" y="2.0"/>
             </sprite>
         </graphics>
         <script id="splash"/>
