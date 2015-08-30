@@ -144,7 +144,7 @@ Glyph Font::renderGlyph(char glyph, float font_size)
     checkGLError();
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmap.width, bitmap.rows, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, bitmap.buffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmap.width, bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap.buffer);
     checkGLError();
     new_glyph.id = glyph;
     new_glyph.dimensions = glm::vec2(bitmap.width, bitmap.rows);

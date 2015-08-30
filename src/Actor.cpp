@@ -61,10 +61,10 @@ StaticActorConstructionData::StaticActorConstructionData(char* text_buffer)
     m_text_buffer = text_buffer;
     try {
         m_document.parse<parse_validate_closing_tags>(m_text_buffer);
+        fromXml(m_document.first_node("actor", 5));
     } catch(parse_error e) {
-        printf("%s: %s\n", e.what(), e.where<char>());
+        warn(std::string("Failed to parse XML: ") + e.what() + std::string(" (") + e.where<char>() + ")");
     }
-    fromXml(m_document.first_node("actor", 5));
 }
 
 void ActorConstructionData::cleanup(void)

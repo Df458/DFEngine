@@ -2,6 +2,7 @@
 #define UTIL_H
 #include <string>
 
+void init_log(void);
 void _warn (const char* file, unsigned line, std::string message);
 void _error(const char* file, unsigned line, std::string message, bool to_exit = true);
 #define warn(message) _warn(__FILE__, __LINE__, message)

@@ -50,6 +50,7 @@ int camera_sky(lua_State* state);
 int billboard_color(lua_State* state);
 int billboard_texture(lua_State* state);
 
+int particle_color(lua_State* state);
 int particle_spawning(lua_State* state);
 int particle_count(lua_State* state);
 
@@ -94,6 +95,7 @@ const luaL_Reg node_particle_attr[] =
 {
     {"render", node_render},
     {"spawning", particle_spawning},
+    {"color", particle_color},
     {"particle_count", particle_count},
     {0, 0}
 };
@@ -283,6 +285,8 @@ public:
     virtual void createParticle(void);
     bool getSpawning(void) { return m_spawning; }
     void setSpawning(bool spawning) { m_spawning = spawning; }
+    RGBAColor getStartingColor(void) const { return m_starting_color; }
+    void setStartingColor(RGBAColor color) { m_starting_color = color; }
     unsigned getParticleCount(void) { return m_particle_count; }
 protected:
     GLuint m_vertex_position_attrib = 0;

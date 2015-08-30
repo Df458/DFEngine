@@ -82,8 +82,9 @@ Scene::Scene(void)
     if(status != GL_FRAMEBUFFER_COMPLETE) {
         fprintf(stderr, "Error code 0x%x: ", status);
         switch(status) {
-            case GL_FRAMEBUFFER_UNDEFINED: fprintf(stderr, "undefined.\n"); break;
-            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: fprintf(stderr, "incomplete attachment.\n"); break;
+            case GL_FRAMEBUFFER_UNDEFINED: fprintf(stderr, "undefined.\n"); warn("Framebuffer is undefined"); break;
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: fprintf(stderr, "incomplete attachment.\n"); warn("Attachment is incomplete"); break;
+            default: warn("Unknown OpenGL error when creating framebuffer");
         }
         error("Failed to init framebuffer");
     }

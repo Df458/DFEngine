@@ -936,6 +936,45 @@ int billboard_color(lua_State* state)
     return 1;
 }
 
+int particle_color(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a particle system, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    ParticleSceneNode* node = (ParticleSceneNode*)gfx->getNode();
+    RGBAColor color;
+    if(lua_gettop(state) > 1) {
+        lua_getfield(state, 2, "r");
+        color.x = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "g");
+        color.y = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "b");
+        color.z = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "a");
+        color.w = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        node->setStartingColor(color);
+        return 0;
+    }
+    color = node->getStartingColor();
+    lua_newtable(state);
+    lua_pushnumber(state, color.x);
+    lua_setfield(state, -2, "r");
+    lua_pushnumber(state, color.y);
+    lua_setfield(state, -2, "g");
+    lua_pushnumber(state, color.z);
+    lua_setfield(state, -2, "b");
+    lua_pushnumber(state, color.w);
+    lua_setfield(state, -2, "a");
+    return 1;
+}
+
 int particle_spawning(lua_State* state)
 {
     lua_getfield(state, 1, "instance");

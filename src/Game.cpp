@@ -159,6 +159,8 @@ bool Game::initialize(void)
     m_components->registerComponentBuilder(buildCamera, "camera");
     m_components->registerComponentBuilder(buildScript, "script");
 
+    warn("Disregard this warning. All systems normal.");
+
     return true;
 }
 

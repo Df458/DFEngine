@@ -29,8 +29,10 @@ bool DFBaseResourceManager::initialize(void)
 {
     // Initialize FreeType
     int error = FT_Init_FreeType(&m_font_library);
-    if(error)
+    if(error) {
+        warn("Failed to initialize FreeType: Error code " + error);
         return false;
+    }
 
     // Compile/Link the wireframe rendering debug shader
     GLuint vertex_shader, fragment_shader;
@@ -166,7 +168,7 @@ bool DFBaseResourceManager::initialize(void)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, BLANK_TEXTURE_BUFFER_DATA);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RED, GL_UNSIGNED_BYTE, BLANK_TEXTURE_BUFFER_DATA);
     if(checkGLError())
         return false;
 
