@@ -124,7 +124,7 @@ static const char* TEXT_FRAGMENT_SHADER[] =
 "uniform sampler2D texture;\n"
 "void main() {\n"
 "gl_FragColor = vec4(color, texture2D(texture, uv).r);\n"
-"if(gl_FragColor.a <= 0.9)\n"
+"if(gl_FragColor.a <= 0.1)\n"
 "discard;\n"
 "}"};
 
