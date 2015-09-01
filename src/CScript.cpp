@@ -20,31 +20,6 @@ IComponent* buildScript(xml_node<>* node, Actor* actor)
     CScript* component = new CScript();
     component->m_state = luaL_newstate();
     luaL_openlibs(component->m_state);
-    if(xml_attribute<>* attr = node->first_attribute("init")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "init");
-    }
-
-    if(xml_attribute<>* attr = node->first_attribute("update")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "update");
-    }
-
-    if(xml_attribute<>* attr = node->first_attribute("collision_enter")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "collision_enter");
-    }
-
-    if(xml_attribute<>* attr = node->first_attribute("collision_tick")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "collision_tick");
-    }
-
-    if(xml_attribute<>* attr = node->first_attribute("collision_leave")) {
-        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
-        lua_setglobal(component->m_state, "collision_leave");
-    }
-
     for(xml_node<>* in = node->first_node("int", 3, false); in; in = in->next_sibling("int", 3, 0))
         if(xml_attribute<>* na = in->first_attribute("name", 4, false))
             if(xml_attribute<>* va = in->first_attribute("value", 5, false)) {
@@ -104,12 +79,34 @@ IComponent* buildScript(xml_node<>* node, Actor* actor)
     lua_pushinteger(component->m_state, 1);
     lua_setglobal(component->m_state, "KEY_PRESSED");
 
+    if(xml_attribute<>* attr = node->first_attribute("id")) {
+        luaL_loadstring(component->m_state, g_game->resources()->getScript(attr->value()));
+        if(lua_pcall(component->m_state, 0, 0, 0)) {
+            warn(lua_tostring(component->m_state, -1));
+        }
+    }
+
+    lua_getglobal(component->m_state, "update");
+    if(lua_isfunction(component->m_state, -1))
+        component->m_has_update = true;
+    lua_pop(component->m_state, 1);
+
     return component;
 }
 
 void CScript::init(void)
 {
     lua_getglobal(m_state, "init");
+    if(!lua_isfunction(m_state, -1)) {
+        lua_pop(m_state, 1);
+    } else if(lua_pcall(m_state, 0, 0, 0)) {
+        warn(lua_tostring(m_state, -1));
+    }
+}
+
+void CScript::callDestroy(void)
+{
+    lua_getglobal(m_state, "destroy");
     if(!lua_isfunction(m_state, -1)) {
         lua_pop(m_state, 1);
     } else if(lua_pcall(m_state, 0, 0, 0)) {
@@ -143,6 +140,8 @@ ComponentID CScript::getID(void)
 void CScript::processCollision(char collision_type, unsigned long other_id)
 {
     *m_other_actor = g_game->actors()->getActor(other_id);
+    if(!*m_other_actor || !(*m_other_actor)->getAlive())
+        return;
     lua_getglobal(m_state, collision_strs[collision_type - 1]);
     if(!lua_isfunction(m_state, -1))
         lua_pop(m_state, 1);
@@ -152,4 +151,64 @@ void CScript::processCollision(char collision_type, unsigned long other_id)
             warn(lua_tostring(m_state, -1));
         }
     }
+}
+
+int cscriptIndex(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access angular velocity, but the Rigid Body Component is missing its instance!");
+    CScript* script = *static_cast<CScript**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    lua_getglobal(script->m_state, lua_tostring(state, 2));
+    switch(lua_type(script->m_state, -1)) {
+        case LUA_TNUMBER:
+            lua_pushnumber(state, lua_tonumber(script->m_state, -1));
+            break;
+        case LUA_TBOOLEAN:
+            lua_pushboolean(state, lua_toboolean(script->m_state, -1));
+            break;
+        case LUA_TSTRING:
+            lua_pushstring(state, lua_tostring(script->m_state, -1));
+            break;
+        case LUA_TFUNCTION:
+            lua_pushcfunction(state, lua_tocfunction(script->m_state, -1));
+            break;
+        default:
+            lua_pop(script->m_state, 1);
+            return 0;
+    }
+    lua_pop(script->m_state, 1);
+
+    return 1;
+}
+
+int cscriptNewIndex(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access angular velocity, but the Rigid Body Component is missing its instance!");
+    CScript* script = *static_cast<CScript**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    switch(lua_type(state, 3)) {
+        case LUA_TNUMBER:
+            lua_pushnumber(script->m_state, lua_tonumber(state, 3));
+            break;
+        case LUA_TBOOLEAN:
+            lua_pushboolean(script->m_state, lua_toboolean(state, -1));
+            break;
+        case LUA_TSTRING:
+            lua_pushstring(script->m_state, lua_tostring(state, -1));
+            break;
+        case LUA_TFUNCTION:
+            lua_pushcfunction(script->m_state, lua_tocfunction(state, -1));
+            break;
+        default:
+            return 0;
+    }
+    lua_setglobal(script->m_state, lua_tostring(state, 2));
+
+    return 0;
 }

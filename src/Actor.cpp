@@ -7,6 +7,7 @@
 #include "EventSystem.h"
 #include "Game.h"
 #include "ResourceManager.h"
+#include "TweenSystem.h"
 #include "Util.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -19,14 +20,14 @@ ActorConstructionData::ActorConstructionData(void)
 
 ActorConstructionData::ActorConstructionData(xml_node<>* root_node)
 {
-    constructFromXml(root_node);
+    fromXml(root_node);
 }
 
 ActorConstructionData::~ActorConstructionData(void)
 {
 }
 
-bool ActorConstructionData::constructFromXml(xml_node<>* root_node)
+bool ActorConstructionData::fromXml(xml_node<>* root_node)
 {
     u_root_node = root_node;
     if(xml_attribute<>* type = u_root_node->first_attribute("id", 2, false)) {
@@ -35,38 +36,20 @@ bool ActorConstructionData::constructFromXml(xml_node<>* root_node)
     if(xml_attribute<>* name = u_root_node->first_attribute("name", 4, false)) {
         m_name = name->value();
     }
-    if(xml_attribute<>* st = u_root_node->first_attribute("static", 6, false)) {
-        m_static = strcmp(st->value(), "false");
-    }
-    if(xml_attribute<>* st = u_root_node->first_attribute("persistent", 10, false)) {
-        m_persistent = strcmp(st->value(), "false");
-    }
+    attr(u_root_node, "static", &m_static);
+    attr(u_root_node, "persistent", &m_persistent);
     if((u_translation_node = u_root_node->first_node("translate", 9, false))) {
-        float x = 0.0f;
-        float y = 0.0f;
-        float z = 0.0f;
-        auto xa = u_translation_node->first_attribute("x", 1, false);
-        auto ya = u_translation_node->first_attribute("y", 1, false);
-        auto za = u_translation_node->first_attribute("z", 1, false);
-        if(xa)
-            x = atof(xa->value());
-        if(ya)
-            y = atof(ya->value());
-        if(za)
-            z = atof(za->value());
-        m_transform.translate(x, y, z, true);
+        glm::vec3 trans(0, 0, 0);
+        attr(u_translation_node, "x", &trans.x);
+        attr(u_translation_node, "y", &trans.y);
+        attr(u_translation_node, "z", &trans.z);
+        m_transform.translate(trans, true);
     }
     if((u_rotation_node = u_root_node->first_node("rotate", 6, false))) {
         glm::vec3 rot(0, 0, 0);
-        auto xa = u_rotation_node->first_attribute("x", 1, false);
-        auto ya = u_rotation_node->first_attribute("y", 1, false);
-        auto za = u_rotation_node->first_attribute("z", 1, false);
-        if(xa)
-            rot.x = atof(xa->value());
-        if(ya)
-            rot.y = atof(ya->value());
-        if(za)
-            rot.z = atof(za->value());
+        attr(u_rotation_node, "x", &rot.x);
+        attr(u_rotation_node, "y", &rot.y);
+        attr(u_rotation_node, "z", &rot.z);
         m_transform.rotate(rot, true);
     }
 
@@ -78,10 +61,10 @@ StaticActorConstructionData::StaticActorConstructionData(char* text_buffer)
     m_text_buffer = text_buffer;
     try {
         m_document.parse<parse_validate_closing_tags>(m_text_buffer);
+        fromXml(m_document.first_node("actor", 5));
     } catch(parse_error e) {
-        printf("%s: %s\n", e.what(), e.where<char>());
+        warn(std::string("Failed to parse XML: ") + e.what() + std::string(" (") + e.where<char>() + ")");
     }
-    constructFromXml(m_document.first_node("actor", 5));
 }
 
 void ActorConstructionData::cleanup(void)
@@ -102,8 +85,12 @@ Actor::Actor(unsigned long id)
 
 void Actor::initialize(void)
 {
-    for(auto i : m_components)
+    for(auto i : m_components) {
         i->init();
+        if(i->getID() == CRIGIDBODY_ID) {
+            m_transform->setWorldTransform(((CRigidBody*) i)->getTransform());
+        }
+    }
 }
 
 bool Actor::applyTransform(ActorConstructionData* data, Transform* transform)
@@ -121,6 +108,8 @@ bool Actor::applyTransform(ActorConstructionData* data, Transform* transform)
     (*m_transform) *= data->m_transform;
     if(transform)
         (*m_transform) *= *transform;
+
+    updateTransform();
     return true;
 }
 
@@ -162,13 +151,16 @@ bool Actor::addComponent(IComponent* component)
         m_named_components[component->getName()] = component;
     }
 
+    if(component->get_has_update())
+        m_updating_components.insert(component);
+
     m_components.insert(component);
     return true;
 }
 
 void Actor::update(float delta_time)
 {
-    for(auto i : m_components)
+    for(auto i : m_updating_components)
         i->update(delta_time);
 
     for(auto i = m_collisions.begin(); i != m_collisions.end();) {
@@ -228,6 +220,14 @@ void Actor::addCollision(unsigned long other_id)
 
 void Actor::_destroy(void)
 {
+    if(!g_game->isQuitting()) {
+        for(auto i : m_components) {
+            if(i->getID() == CSCRIPT_ID) {
+                ((CScript*)i)->callDestroy();
+            }
+        }
+    }
+
     ActorDestroyedEvent destroyed_ev(m_id);
     g_game->events()->callEvent(destroyed_ev);
     auto it = m_components.begin();
@@ -319,7 +319,6 @@ int actor_scale(lua_State* state)
     if(lua_gettop(state) >= 5)
         relative = lua_toboolean(state, 5);
 
-    //warn("Transform scaling is currently impossible");
     actor->getTransform()->scale(scale, relative);
     actor->updateTransform();
 
@@ -377,6 +376,9 @@ int actor_get_component(lua_State* state)
     IComponent** cmpdat = static_cast<IComponent**>(lua_newuserdata(state, sizeof(IComponent*)));
     *cmpdat = it->second;
     lua_setfield(state, -2, "instance");
+    lua_newtable(state);
+    luaL_setfuncs(state, it->second->getMetaFuncs(), 0);
+    lua_setmetatable(state, -2);
 
     return 1;
 }
@@ -392,7 +394,7 @@ int actor_transform(lua_State* state)
     // TODO: Get transform here
     Transform* transform = actor->getTransform();
     glm::vec3 position = transform->getPosition();
-    glm::vec3 rotation = transform->getRotation();
+    glm::vec3 rotation = transform->getERotation();
     glm::vec3 scale = transform->getScaling();
     
     lua_newtable(state);
@@ -425,4 +427,162 @@ int actor_transform(lua_State* state)
     lua_setfield(state, -2, "scale");
 
     return 1;
+}
+
+int actor_register_tween(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to register a tween, but the Actor is missing its instance!");
+    Actor* actor = *static_cast<Actor**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    unsigned int actor_id = actor->getID();
+
+    Tween* tween = new Tween();
+    CurveType default_curve = CurveType::LINEAR;
+    if(lua_gettop(state) == 2) {
+        lua_getfield(state, 2, "start_value");
+        if(lua_isnumber(state, -1))
+            tween->start_value = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "end_value");
+        if(lua_isnumber(state, -1))
+            tween->end_value = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "length");
+        if(lua_isnumber(state, -1))
+            tween->length = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        if(tween->length == 0) {
+            warn("Tween length cannot be 0");
+            tween->length = 1;
+        }
+        lua_getfield(state, 2, "offset");
+        if(lua_isnumber(state, -1))
+            tween->position = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "loop");
+        if(lua_isboolean(state, -1))
+            tween->repeat = lua_toboolean(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "reverse");
+        if(lua_isboolean(state, -1))
+            tween->reverse = lua_toboolean(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "playing");
+        if(lua_isboolean(state, -1))
+            tween->playing = lua_toboolean(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, -1, "curve");
+        if(lua_isstring(state, -1)) {
+            const char* str = lua_tostring(state, -1);
+            if(!strcmp(str, "none")) {
+                default_curve = CurveType::NONE;
+            } else if(!strcmp(str, "linear"))
+                default_curve = CurveType::LINEAR;
+            else if(!strcmp(str, "ease_in"))
+                default_curve = CurveType::EASE_IN;
+            else if(!strcmp(str, "ease_out"))
+                default_curve = CurveType::EASE_OUT;
+        }
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "segments");
+        if(lua_istable(state, -1)) {
+            lua_pushnil(state);
+            while(lua_next(state, -2)) {
+                Transition t;
+                lua_getfield(state, -1, "position");
+                if(lua_isnumber(state, -1)) 
+                    t.start = lua_tonumber(state, -1);
+                lua_pop(state, 1);
+                lua_getfield(state, -1, "curve");
+                if(lua_isstring(state, -1)) {
+                    const char* str = lua_tostring(state, -1);
+                    if(!strcmp(str, "none")) {
+                        t.type = CurveType::NONE;
+                    } else if(!strcmp(str, "linear"))
+                        t.type = CurveType::LINEAR;
+                    else if(!strcmp(str, "ease_in"))
+                        t.type = CurveType::EASE_IN;
+                    else if(!strcmp(str, "ease_out"))
+                        t.type = CurveType::EASE_OUT;
+                }
+                lua_pop(state, 1);
+                lua_getfield(state, -1, "value");
+                if(lua_isnumber(state, -1))
+                    t.start_value = lua_tonumber(state, -1);
+                lua_pop(state, 1);
+                if(tween->transitions.size() > 0) {
+                    tween->transitions[tween->transitions.size() - 1].end = t.start;
+                    tween->transitions[tween->transitions.size() - 1].end_value = t.start_value;
+                }
+                tween->transitions.push_back(t);
+                lua_pop(state, 1);
+            }
+        }
+        lua_pop(state, 1);
+    }
+
+    if(tween->transitions.size() == 0) {
+        tween->transitions.push_back(Transition());
+        tween->transitions[0].type = default_curve;
+    }
+    tween->transitions[0].start_value = tween->start_value;
+    tween->transitions[0].start = 0;
+    tween->transitions[tween->transitions.size() - 1].end_value = tween->end_value;
+    tween->transitions[tween->transitions.size() - 1].end = 1;
+
+    lua_newtable(state);
+    Tween** dat = static_cast<Tween**>(lua_newuserdata(state, sizeof(Tween*)));
+    *dat = tween;
+    lua_setfield(state, -2, "instance");
+    lua_newtable(state);
+    luaL_setfuncs(state, tweenMeta, 0);
+    lua_setmetatable(state, -2);
+
+    g_game->tweens()->tween_map[actor_id].push_back(tween);
+    g_game->tweens()->tweens.insert(tween);
+    return 1;
+}
+
+int actor_get_tween(lua_State* state)
+{
+    return 1;
+}
+
+int actor_index(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access data, but the Actor is missing its instance!");
+    Actor* actor = *static_cast<Actor**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    if(!strcmp(lua_tostring(state, 2), "transform")) {
+        lua_newtable(state);
+        Transform** t = static_cast<Transform**>(lua_newuserdata(state, sizeof(Transform*)));
+        *t = actor->getTransform();
+        lua_setfield(state, -2, "instance");
+        lua_newtable(state);
+        luaL_setfuncs(state, transform_meta, 0);
+        lua_setmetatable(state, -2);
+    } else
+        return 0;
+    return 1;
+}
+
+int actor_newindex(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access data, but the Actor is missing its instance!");
+    Actor* actor = *static_cast<Actor**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    if(!strcmp(lua_tostring(state, 2), "transform")) {
+        lua_settop(state, 3);
+        actor->m_transform->setWorldTransform(state);
+    }
+    return 0;
 }

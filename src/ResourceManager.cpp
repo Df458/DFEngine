@@ -17,6 +17,7 @@ GLuint WIREFRAME_PROGRAM;
 GLuint SPRITE_PROGRAM;
 GLuint PARTICLE_PROGRAM;
 GLuint TEXT_PROGRAM;
+GLuint LETTERBOX_PROGRAM;
 GLuint QUAD_BUFFER;
 GLuint BLANK_TEXTURE;
 
@@ -28,8 +29,10 @@ bool DFBaseResourceManager::initialize(void)
 {
     // Initialize FreeType
     int error = FT_Init_FreeType(&m_font_library);
-    if(error)
+    if(error) {
+        warn("Failed to initialize FreeType: Error code " + error);
         return false;
+    }
 
     // Compile/Link the wireframe rendering debug shader
     GLuint vertex_shader, fragment_shader;
@@ -39,6 +42,7 @@ bool DFBaseResourceManager::initialize(void)
     SPRITE_PROGRAM = glCreateProgram();
     PARTICLE_PROGRAM = glCreateProgram();
     TEXT_PROGRAM = glCreateProgram();
+    LETTERBOX_PROGRAM = glCreateProgram();
     glShaderSource(vertex_shader, 1, WIREFRAME_VERTEX_SHADER, NULL);
     glShaderSource(fragment_shader, 1, WIREFRAME_FRAGMENT_SHADER, NULL);
     if(checkGLError())
@@ -125,10 +129,35 @@ bool DFBaseResourceManager::initialize(void)
     
     glDetachShader(TEXT_PROGRAM, vertex_shader);
     glDetachShader(TEXT_PROGRAM, fragment_shader);
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
     if(checkGLError())
         return false;
+    glShaderSource(vertex_shader, 1, LETTERBOX_VERTEX_SHADER, NULL);
+    glShaderSource(fragment_shader, 1, LETTERBOX_FRAGMENT_SHADER, NULL);
+    if(checkGLError())
+        return false;
+
+    glCompileShader(vertex_shader);
+    glCompileShader(fragment_shader);
+    glAttachShader(LETTERBOX_PROGRAM, vertex_shader);
+    glAttachShader(LETTERBOX_PROGRAM, fragment_shader);
+    glLinkProgram(LETTERBOX_PROGRAM);
+    if(checkGLError())
+        return false;
+    glGetShaderInfoLog(vertex_shader, 1024, &len, log);
+    if(len)
+        printf("Vertex Shader Log\n%s\n", log);
+    glGetShaderInfoLog(fragment_shader, 1024, &len, log);
+    if(len)
+        printf("Fragment Shader Log\n%s\n", log);
+    //exit(0);
+    if(checkGLError())
+        return false;
+    
+    glDetachShader(LETTERBOX_PROGRAM, vertex_shader);
+    glDetachShader(LETTERBOX_PROGRAM, fragment_shader);
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+
 
     glGenBuffers(1, &QUAD_BUFFER);
     glBindBuffer(GL_ARRAY_BUFFER, QUAD_BUFFER);
@@ -139,7 +168,7 @@ bool DFBaseResourceManager::initialize(void)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, BLANK_TEXTURE_BUFFER_DATA);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RED, GL_UNSIGNED_BYTE, BLANK_TEXTURE_BUFFER_DATA);
     if(checkGLError())
         return false;
 
@@ -267,10 +296,11 @@ Level* DFBaseResourceManager::getLevel(std::string id)
 
 IModel* DFBaseResourceManager::getModel(std::string id)
 {
+    std::string name = id;
     id = MODEL_DATA_PATH + id + MODEL_SUFFIX;
     auto search = m_models.find(id);
     if(search == m_models.end()) {
-        IModel* load_result = _loadModel(id);
+        IModel* load_result = _loadModel(id, name);
         if(!load_result) {
             error("Trying to load a model that doesn't exist.");
             return NULL;
@@ -327,10 +357,11 @@ char* const DFBaseResourceManager::getScript(std::string id)
 
 IShader* DFBaseResourceManager::getShader(std::string id)
 {
+    std::string name = id;
     id = SHADER_DATA_PATH + id;
     auto search = m_shaders.find(id);
     if(search == m_shaders.end()) {
-        IShader* load_result = _loadShader(id);
+        IShader* load_result = _loadShader(id, name);
         if(!load_result) {
             error("Trying to load a shader that doesn't exist.");
             return NULL;
@@ -357,12 +388,13 @@ Material* DFBaseResourceManager::getShaderMaterial(std::string id)
     return search->second;
 }
 
-GLuint DFBaseResourceManager::getTexture(std::string id)
+Texture* DFBaseResourceManager::getTexture(std::string id)
 {
+    std::string name = id;
     id = TEXTURE_DATA_PATH + id + TEXTURE_SUFFIX;
     auto search = m_textures.find(id);
     if(search == m_textures.end()) {
-        GLuint load_result = _loadTexture(id);
+        Texture* load_result = _loadTexture(id, name);
         if(!load_result) {
             error("Trying to load a texture that doesn't exist.");
             return 0;
@@ -425,7 +457,8 @@ bool DFBaseResourceManager::loadLevel(std::string id)
 
 bool DFBaseResourceManager::loadModel(std::string id)
 {
-    IModel* data = _loadModel(MODEL_DATA_PATH + id + MODEL_SUFFIX);
+    std::string name = id;
+    IModel* data = _loadModel(MODEL_DATA_PATH + id + MODEL_SUFFIX, name);
     if(!data) {
         warn("Trying to load a model that doesn't exist.");
         return false;
@@ -441,7 +474,7 @@ bool DFBaseResourceManager::loadPhysicsMaterial(std::string id)
 
 bool DFBaseResourceManager::loadProgram(std::string id)
 {
-    GLuint data = _loadTexture(SHADER_DATA_PATH + id);
+    GLuint data = _loadProgram(SHADER_DATA_PATH + id);
     if(!data) {
         warn("Trying to load a shader program that doesn't exist.");
         return false;
@@ -461,7 +494,8 @@ bool DFBaseResourceManager::loadScript(std::string id)
 
 bool DFBaseResourceManager::loadShader(std::string id)
 {
-    IShader* data = _loadShader(SHADER_DATA_PATH + id);
+    std::string name = id;
+    IShader* data = _loadShader(SHADER_DATA_PATH + id, name);
     if(!data) {
         warn("Trying to load a shader that doesn't exist.");
         return false;
@@ -481,7 +515,8 @@ bool DFBaseResourceManager::loadShaderMaterial(std::string id)
 
 bool DFBaseResourceManager::loadTexture(std::string id)
 {
-    GLuint data = _loadTexture(TEXTURE_DATA_PATH + id +TEXTURE_SUFFIX);
+    std::string name = id;
+    Texture* data = _loadTexture(TEXTURE_DATA_PATH + id +TEXTURE_SUFFIX, name);
     if(!data) {
         warn("Trying to load a texture that doesn't exist.");
         return false;
@@ -495,7 +530,7 @@ StaticActorConstructionData* DFBaseResourceManager::_loadActor(std::string id)
         warn("Trying to load an actor that already exists.");
         return m_actors[id];
     }
-    char* filedata = loadFileContents(id);
+    char* filedata = loadFileContents(getPath() + "/" + id);
     if(!filedata)
         return NULL;
 
@@ -514,7 +549,7 @@ ISound* DFBaseResourceManager::_loadAudio(std::string id)
     }
 
     ISound* snd = new SoundEffect();
-    if(!snd->load(id.c_str(), SoundFile::WAV)) {
+    if(!snd->load((getPath() + "/" + id).c_str(), SoundFile::WAV)) {
         delete snd;
         return NULL;
     }
@@ -531,7 +566,7 @@ ISound* DFBaseResourceManager::_loadAudioStream(std::string id)
     }
 
     ISound* snd = new SoundStream();
-    if(!snd->load(id.c_str(), SoundFile::OGG)) {
+    if(!snd->load((getPath() + "/" + id).c_str(), SoundFile::OGG)) {
         delete snd;
         return NULL;
     }
@@ -547,7 +582,7 @@ IFont* DFBaseResourceManager::_loadFont(std::string id)
         return m_fonts[id];
     }
 
-    Font* font = new Font(id.c_str(), m_font_library);
+    Font* font = new Font((getPath() + "/" + id).c_str(), m_font_library);
     if(font->failedLoad()) {
         delete font;
         return 0;
@@ -564,7 +599,7 @@ Level* DFBaseResourceManager::_loadLevel(std::string id)
         warn("Trying to load an level that already exists.");
         return m_levels[id];
     }
-    char* filedata = loadFileContents(id);
+    char* filedata = loadFileContents((getPath() + "/" + id));
     if(!filedata)
         return NULL;
 
@@ -575,17 +610,17 @@ Level* DFBaseResourceManager::_loadLevel(std::string id)
     return level_data;
 }
 
-IModel* DFBaseResourceManager::_loadModel(std::string id)
+IModel* DFBaseResourceManager::_loadModel(std::string id, std::string name)
 {
     if(m_models.find(id) != m_models.end()) {
         warn("Trying to load an model that already exists.");
         return m_models[id];
     }
-    char* filedata = loadFileContents(id);
+    char* filedata = loadFileContents(getPath() + "/" + id);
     if(!filedata)
         return NULL;
 
-    IModel* model_data = new Model(filedata);
+    IModel* model_data = new Model(filedata, name);
     delete[] filedata;
 
     m_models.emplace(id, model_data);
@@ -599,7 +634,7 @@ PhysicsMaterial DFBaseResourceManager::_loadPhysicsMaterial(std::string id)
         warn("Trying to load an physics material that already exists.");
         return m_physics_materials[id];
     }
-    char* filedata = loadFileContents(id);
+    char* filedata = loadFileContents(getPath() + "/" + id);
     if(!filedata)
         return NULL;
 
@@ -624,11 +659,11 @@ GLuint DFBaseResourceManager::_loadProgram(std::string id)
         warn("Trying to load a shader program that already exists.");
         return m_programs[id];
     }
-    char* vertex_filedata = loadFileContents(id + VERTEX_SHADER_SUFFIX);
+    char* vertex_filedata = loadFileContents(getPath() + "/" + id + VERTEX_SHADER_SUFFIX);
     if(!vertex_filedata)
         return 0;
 
-    char* fragment_filedata = loadFileContents(id + FRAGMENT_SHADER_SUFFIX);
+    char* fragment_filedata = loadFileContents(getPath() + "/" + id + FRAGMENT_SHADER_SUFFIX);
     if(!fragment_filedata) {
         delete vertex_filedata;
         return 0;
@@ -675,17 +710,17 @@ GLuint DFBaseResourceManager::_loadProgram(std::string id)
     return program;
 }
 
-IShader* DFBaseResourceManager::_loadShader(std::string id)
+IShader* DFBaseResourceManager::_loadShader(std::string id, std::string name)
 {
     if(m_shaders.find(id) != m_shaders.end()) {
         warn("Trying to load a shader that already exists.");
         return m_shaders[id];
     }
-    char* vertex_filedata = loadFileContents(id + VERTEX_SHADER_SUFFIX);
+    char* vertex_filedata = loadFileContents(getPath() + "/" + id + VERTEX_SHADER_SUFFIX);
     if(!vertex_filedata)
         return NULL;
 
-    char* fragment_filedata = loadFileContents(id + FRAGMENT_SHADER_SUFFIX);
+    char* fragment_filedata = loadFileContents(getPath() + "/" + id + FRAGMENT_SHADER_SUFFIX);
     if(!fragment_filedata) {
         delete vertex_filedata;
         return NULL;
@@ -727,7 +762,7 @@ IShader* DFBaseResourceManager::_loadShader(std::string id)
     delete[] fragment_filedata;
     checkGLError();
 
-    IShader* shader_data = new BasicShader(program);
+    IShader* shader_data = new BasicShader(program, name);
 
     m_shaders.emplace(id, shader_data);
     m_programs.emplace(id, program);
@@ -742,7 +777,7 @@ Material* DFBaseResourceManager::_loadShaderMaterial(std::string id)
         return m_shader_materials[id];
     }
 
-    FILE* file = fopen(id.c_str(), "rb");
+    FILE* file = fopen((getPath() + "/" + id).c_str(), "rb");
     if(!file) {
         warn("Could not open file."); // TODO: Make this more descriptive
         return 0;
@@ -759,7 +794,7 @@ char* DFBaseResourceManager::_loadScript(std::string id)
         warn("Trying to load a script that already exists.");
         return m_scripts[id];
     }
-    char* script = loadFileContents(id + SCRIPT_SUFFIX);
+    char* script = loadFileContents(getPath() + "/" + id + SCRIPT_SUFFIX);
     if(!script) // TODO: Add a warning here
         return NULL;
     m_scripts.emplace(id, script);
@@ -767,17 +802,18 @@ char* DFBaseResourceManager::_loadScript(std::string id)
     return script;
 }
 
-GLuint DFBaseResourceManager::_loadTexture(std::string id)
+Texture* DFBaseResourceManager::_loadTexture(std::string id, std::string name)
 {
     if(m_textures.find(id) != m_textures.end()) {
         warn("Trying to load a texture that already exists.");
         return m_textures[id];
     }
-	GLuint texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture);
+	Texture* texture = new Texture();
+    texture->name = name;
+	glGenTextures(1, &texture->texture_handle);
+	glBindTexture(GL_TEXTURE_2D, texture->texture_handle);
 	
-	FILE* infile = fopen(id.c_str(), "rb");
+	FILE* infile = fopen((getPath() + "/" + id).c_str(), "rb");
 	if(!infile) {
 		warn("Could not open file.");
 		return 0;
@@ -786,7 +822,6 @@ GLuint DFBaseResourceManager::_loadTexture(std::string id)
 	uint8_t header[8];
 	png_structp pstruct;
 	png_infop info_struct;
-	uint16_t width, height;
 	png_byte* image_data;
 	png_bytep* row_ptrs;
 	
@@ -814,8 +849,8 @@ GLuint DFBaseResourceManager::_loadTexture(std::string id)
 	png_set_sig_bytes(pstruct, 8);
 	png_read_info(pstruct, info_struct);
 	
-	width = png_get_image_width(pstruct, info_struct);
-	height = png_get_image_height(pstruct, info_struct);
+	texture->texture_width = png_get_image_width(pstruct, info_struct);
+	texture->texture_height = png_get_image_height(pstruct, info_struct);
     png_byte color_type = png_get_color_type(pstruct, info_struct);
     png_byte bit_depth = png_get_bit_depth(pstruct, info_struct);
     int number_of_passes = png_set_interlace_handling(pstruct);
@@ -833,10 +868,10 @@ GLuint DFBaseResourceManager::_loadTexture(std::string id)
 	int rowbytes = png_get_rowbytes(pstruct, info_struct);
 	//rowbytes += 3 - ((rowbytes-1) % 4);
 	
-	image_data = (png_byte*)malloc(rowbytes * height /** sizeof(png_byte)+15*/);
-	row_ptrs = (png_bytep*)malloc(sizeof(png_bytep) * height);
-	for(int i = 0; i < height; i++){
-		row_ptrs[height - 1 - i] = image_data + i * rowbytes;
+	image_data = (png_byte*)malloc(rowbytes * texture->texture_height /** sizeof(png_byte)+15*/);
+	row_ptrs = (png_bytep*)malloc(sizeof(png_bytep) * texture->texture_height);
+	for(unsigned i = 0; i < texture->texture_height; i++){
+		row_ptrs[texture->texture_height - 1 - i] = image_data + i * rowbytes;
 	}
 	
 	png_read_image(pstruct, row_ptrs);
@@ -846,7 +881,7 @@ GLuint DFBaseResourceManager::_loadTexture(std::string id)
 		std::cerr << "Added Alpha channel\n";
 	}*/
 	
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->texture_width, texture->texture_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);

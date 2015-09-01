@@ -16,6 +16,18 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
 {
     xml_node<>* shape_node = node->first_node("shape", 5, false);
     xml_node<>* mat_node = node->first_node("material", 8, false);
+    xml_node<>* lfac_node = node->first_node("linear_factor", 13, false);
+    xml_node<>* afac_node = node->first_node("angular_factor", 14, false);
+    xml_node<>* lvel_node = node->first_node("linear_velocity", 15, false);
+    xml_node<>* avel_node = node->first_node("angular_velocity", 16, false);
+    xml_node<>* layer_node = node->first_node("layer", 5, false);
+    btVector3 linear_fac(1, 1, 1);
+    btVector3 angular_fac(1, 1, 1);
+    btVector3 linear_vel(0, 0, 0);
+    btVector3 angular_vel(0, 0, 0);
+    int mask = -1;
+    int group = -1;
+    bool kinematic = false;
     PhysicsMaterial mat;
     xml_attribute<>* shape_id = NULL;
     btCollisionShape* shape = NULL;
@@ -69,10 +81,58 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     if(mat_node)
         if(xml_attribute<>* id = mat_node->first_attribute("id", 2, false))
             mat = g_game->resources()->getPhysicsMaterial(id->value());
+    if(lfac_node) {
+        if(xml_attribute<>* at = lfac_node->first_attribute("x", 1, false))
+            linear_fac.setX(atof(at->value()));
+        if(xml_attribute<>* at = lfac_node->first_attribute("y", 1, false))
+            linear_fac.setY(atof(at->value()));
+        if(xml_attribute<>* at = lfac_node->first_attribute("z", 1, false))
+            linear_fac.setZ(atof(at->value()));
+    }
+    if(afac_node) {
+        if(xml_attribute<>* at = afac_node->first_attribute("x", 1, false))
+            angular_fac.setX(atof(at->value()));
+        if(xml_attribute<>* at = afac_node->first_attribute("y", 1, false))
+            angular_fac.setY(atof(at->value()));
+        if(xml_attribute<>* at = afac_node->first_attribute("z", 1, false))
+            angular_fac.setZ(atof(at->value()));
+    }
+    if(lvel_node) {
+        if(xml_attribute<>* at = lvel_node->first_attribute("x", 1, false))
+            linear_vel.setX(atof(at->value()));
+        if(xml_attribute<>* at = lvel_node->first_attribute("y", 1, false))
+            linear_vel.setY(atof(at->value()));
+        if(xml_attribute<>* at = lvel_node->first_attribute("z", 1, false))
+            linear_vel.setZ(atof(at->value()));
+    }
+    if(avel_node) {
+        if(xml_attribute<>* at = avel_node->first_attribute("x", 1, false))
+            angular_vel.setX(atof(at->value()));
+        if(xml_attribute<>* at = avel_node->first_attribute("y", 1, false))
+            angular_vel.setY(atof(at->value()));
+        if(xml_attribute<>* at = avel_node->first_attribute("z", 1, false))
+            angular_vel.setZ(atof(at->value()));
+    }
+    if(layer_node) {
+        if(xml_attribute<>* at = layer_node->first_attribute("mask", 4, false))
+            mask = atoi(at->value());
+        if(xml_attribute<>* at = layer_node->first_attribute("group", 5, false))
+            group = atoi(at->value());
+    }
 
     float mass = 0;
     if(xml_attribute<>* ma = node->first_attribute("mass", 4, false))
         mass = atof(ma->value()) * mat.mass;
+
+    if(xml_attribute<>* at = node->first_attribute("type", 4, false)) {
+        if(!strcmp(at->value(), "static")) {
+            mass = 0;
+        }
+        if(!strcmp(at->value(), "kinematic")) {
+            mass = 0;
+            kinematic = true;
+        }
+    }
     btVector3 inertia(0, 0, 0);
     shape->calculateLocalInertia(mass, inertia);
     btRigidBody::btRigidBodyConstructionInfo cinfo = btRigidBody::btRigidBodyConstructionInfo(mass, actor->getTransform(), shape, inertia);
@@ -80,11 +140,22 @@ IComponent* buildRigidBody(xml_node<>* node, Actor* actor)
     cinfo.m_friction = mat.sliding_friction;
     cinfo.m_rollingFriction = mat.rolling_friction;
     rigid_body = new btRigidBody(cinfo);
+    rigid_body->setLinearFactor(linear_fac);
+    rigid_body->setAngularFactor(angular_fac);
+    rigid_body->setLinearVelocity(linear_vel);
+    rigid_body->setAngularVelocity(angular_vel);
+    rigid_body->setDamping(mat.linear_damp, mat.angular_damp);
+    if(kinematic) {
+        rigid_body->setCollisionFlags(rigid_body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+        rigid_body->setActivationState(DISABLE_DEACTIVATION);
+    }
 
     CRigidBody* component = new CRigidBody();
     component->m_body = rigid_body;
+    component->m_mask = mask;
+    component->m_group = group;
     rigid_body->setUserPointer(actor);
-    CRigidBodyCreatedEvent created_ev(rigid_body, actor->getID());
+    CRigidBodyCreatedEvent created_ev(rigid_body, mask, group, actor->getID());
     g_game->events()->callEvent(created_ev);
 
     return component;
@@ -97,9 +168,11 @@ const EventType& CRigidBodyCreatedEvent::getEventType(void) const
     return m_type;
 }
 
-CRigidBodyCreatedEvent::CRigidBodyCreatedEvent(btRigidBody* body, unsigned long id)
+CRigidBodyCreatedEvent::CRigidBodyCreatedEvent(btRigidBody* body, int mask, int group, unsigned long id)
 {
     m_id = id;
+    m_mask = mask;
+    m_group = group;
     u_body = body;
 }
 
@@ -148,7 +221,43 @@ ComponentID CRigidBody::getID(void)
     return CRIGIDBODY_ID;
 }
 
-int crigidbody_velocity(lua_State* state)
+int crigidbody_Index(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access data, but the Rigid Body Component is missing its instance!");
+    CRigidBody* body = *static_cast<CRigidBody**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    if(!strcmp(lua_tostring(state, 2), "velocity")) {
+        btVector3 vec = body->m_body->getLinearVelocity();
+        lua_newtable(state);
+        lua_pushnumber(state, vec.x());
+        lua_setfield(state, -2, "x");
+        lua_pushnumber(state, vec.y());
+        lua_setfield(state, -2, "y");
+        lua_pushnumber(state, vec.z());
+        lua_setfield(state, -2, "z");
+    } else if(!strcmp(lua_tostring(state, 2), "angular_velocity")) {
+        btVector3 vec = body->m_body->getAngularVelocity();
+        lua_newtable(state);
+        lua_pushnumber(state, vec.x());
+        lua_setfield(state, -2, "x");
+        lua_pushnumber(state, vec.y());
+        lua_setfield(state, -2, "y");
+        lua_pushnumber(state, vec.z());
+        lua_setfield(state, -2, "z");
+    } else if(!strcmp(lua_tostring(state, 2), "collision_mask")) {
+        lua_pushinteger(state, body->m_body->getBroadphaseProxy()->m_collisionFilterMask);
+    } else if(!strcmp(lua_tostring(state, 2), "collision_group")) {
+        lua_pushinteger(state, body->m_body->getBroadphaseProxy()->m_collisionFilterGroup);
+    } else
+        return 0;
+
+    return 1;
+}
+
+int crigidbody_NewIndex(lua_State* state)
 {
     lua_getfield(state, 1, "instance");
     if(!lua_isuserdata(state, -1))
@@ -156,56 +265,35 @@ int crigidbody_velocity(lua_State* state)
     CRigidBody* body = *static_cast<CRigidBody**>(lua_touserdata(state, -1));
     lua_pop(state, 1);
 
-    btVector3 vec = body->m_body->getLinearVelocity();
-    if(lua_gettop(state) >= 4) {
-        bool relative = false;
-        if(lua_gettop(state) >= 5)
-            relative = lua_toboolean(state, 5);
-        btVector3 vel(lua_tonumber(state, 2), lua_tonumber(state, 3), lua_tonumber(state, 4));
-        if(relative)
-            vel += vec; 
-        body->m_body->setLinearVelocity(vel);
-        body->m_body->setActivationState(ACTIVE_TAG);
-        return 0;
-    }
-
-    lua_newtable(state);
-    lua_pushnumber(state, vec.x());
-    lua_setfield(state, -2, "x");
-    lua_pushnumber(state, vec.y());
-    lua_setfield(state, -2, "y");
-    lua_pushnumber(state, vec.z());
-    lua_setfield(state, -2, "z");
-    return 1;
-}
-
-int crigidbody_angular_velocity(lua_State* state)
-{
-    lua_getfield(state, 1, "instance");
-    if(!lua_isuserdata(state, -1))
-        return luaL_error(state, "Trying to access angular velocity, but the Rigid Body Component is missing its instance!");
-    CRigidBody* body = *static_cast<CRigidBody**>(lua_touserdata(state, -1));
-    lua_pop(state, 1);
-
-    btVector3 vec = body->m_body->getAngularVelocity();
-    if(lua_gettop(state) >= 4) {
-        bool relative = false;
-        if(lua_gettop(state) >= 5)
-            relative = lua_toboolean(state, 5);
-        btVector3 vel(lua_tonumber(state, 2), lua_tonumber(state, 3), lua_tonumber(state, 4));
-        if(relative)
-            vel += vec; 
-        body->m_body->setAngularVelocity(vel);
-        body->m_body->setActivationState(ACTIVE_TAG);
-        return 0;
-    }
-
-    lua_newtable(state);
-    lua_pushnumber(state, vec.x());
-    lua_setfield(state, -2, "x");
-    lua_pushnumber(state, vec.y());
-    lua_setfield(state, -2, "y");
-    lua_pushnumber(state, vec.z());
-    lua_setfield(state, -2, "z");
-    return 1;
+    if(!strcmp(lua_tostring(state, 2), "velocity")) {
+        btVector3 vec;
+        lua_getfield(state, 3, "x");
+        vec.setX(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        lua_getfield(state, 3, "y");
+        vec.setY(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        lua_getfield(state, 3, "z");
+        vec.setZ(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        body->m_body->setLinearVelocity(vec);
+    } else if(!strcmp(lua_tostring(state, 2), "angular_velocity")) {
+        btVector3 vec;
+        lua_getfield(state, 3, "x");
+        vec.setX(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        lua_getfield(state, 3, "y");
+        vec.setY(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        lua_getfield(state, 3, "z");
+        vec.setZ(lua_tonumber(state, -1));
+        lua_pop(state, 1);
+        body->m_body->setAngularVelocity(vec);
+    } else if(!strcmp(lua_tostring(state, 2), "collision_mask")) {
+        body->m_body->getBroadphaseProxy()->m_collisionFilterMask = lua_tointeger(state, 3);
+    } else if(!strcmp(lua_tostring(state, 2), "collision_group")) {
+        body->m_body->getBroadphaseProxy()->m_collisionFilterGroup = lua_tointeger(state, 3);
+    } else
+        warn("Trying to set a Rigidbody field that doesn't exist");
+    return 0;
 }

@@ -15,7 +15,7 @@ bool EventSystem::initialize(void)
     return true;
 }
 
-void EventSystem::update(void)
+void EventSystem::update(float dt)
 {
     while(!m_event_queue.empty()) {
         callEvent(*m_event_queue.front());

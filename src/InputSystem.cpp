@@ -54,7 +54,7 @@ void DFBaseInputSystem::pushGameEvents(void)
 {
 }
 
-void DFBaseInputSystem::update(void)
+void DFBaseInputSystem::update(float dt)
 {
     for(int i = 0; i < GLFW_KEY_LAST; ++i)
         if(m_keys[i] == GLFW_PRESS)
@@ -115,14 +115,14 @@ void fileDropCallback(GLFWwindow* window, int file_count, const char** file_list
 
 int input_keystate(lua_State* state)
 {
-    if(lua_isstring(state, 1)) {
+    if(lua_isinteger(state, 1)) {
+        int key_id = lua_tointeger(state, 1);
+        lua_pushinteger(state, g_game->input()->getKeyState(key_id));
+    } else if(lua_isstring(state, 1)) {
         char key_char = lua_tostring(state, 1)[0];
         if(key_char >= 97 && key_char <= 122)
             key_char -= 32;
         lua_pushinteger(state, g_game->input()->getKeyState(key_char));
-    } else if(lua_isinteger(state, 1)) {
-        int key_id = lua_tointeger(state, 1);
-        lua_pushinteger(state, g_game->input()->getKeyState(key_id));
     } else {
         return luaL_error(state, "keystate expects a char or int.");
     }
@@ -142,7 +142,7 @@ int input_mousestate(lua_State* state)
 
 int input_mouseposition(lua_State* state)
 {
-    glm::vec2 position = g_game->input()->getMousePosition();
+    glm::vec2 position = (g_game->input()->getMousePosition() - (g_game->graphics()->getViewportOffset() * 0.5f)) / (g_game->graphics()->getViewportSize() - g_game->graphics()->getViewportOffset());
     lua_pushnumber(state, position.x);
     lua_pushnumber(state, position.y);
     return 2;

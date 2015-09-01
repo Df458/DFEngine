@@ -28,7 +28,7 @@ public:
     EventSystem(void);
     virtual ~EventSystem(void);
     bool initialize(void);
-    void update(void);
+    void update(float dt);
     void cleanup(void);
     virtual bool addSubscription(const Callback& subscription_callback, const EventType& type);
     virtual bool rmSubscription (void* subscriber, const EventType& type);

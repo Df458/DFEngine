@@ -34,26 +34,44 @@ void Font::cleanup(void)
 
 void Font::draw(IScene* scene, const char* text, glm::mat4 transform, float font_size, glm::vec3 color)
 {
-	FT_Set_Char_Size(m_font_face, 0, font_size * 64, 300, 300);
+	FT_Set_Pixel_Sizes(m_font_face, font_size, font_size);
     glUseProgram(TEXT_PROGRAM);
     checkGLError();
 
     glm::vec3 pen(0, 0, 0);
+    char prev = 0;
+    bool kern = FT_HAS_KERNING(m_font_face);
     for(const char* i = text; i[0]; ++i) {
+        FT_UInt index = FT_Get_Char_Index(m_font_face, i[0]);
         Glyph glyph = renderGlyph(i[0], font_size);
+
+        if(prev && kern && i) {
+            FT_Vector delta;
+            FT_Get_Kerning(m_font_face, prev, index, FT_KERNING_DEFAULT, &delta);
+            pen.x += delta.x * scene->getDPU();
+            //fprintf(stderr, "%ld\n", delta.x);
+        }
 
         if(i[0] == '\n') {
             pen.x = 0;
-            pen.y += font_size * 4;
+            pen.y += font_size;
+            prev = 0;
             continue;
         } else if(i[0] == ' ' || glyph.id == 0) {
-            pen.x += font_size * 2;
+            pen.x += font_size;
+            prev = 0;
             continue;
         }
 
         glUniform3f(m_color_uniform, color.x, color.y, color.z);
         glm::vec3 offset(glyph.bearing.x, -glyph.bearing.y, 0.0f);
-        glm::mat4 mvp = scene->getActiveProjectionMatrix() * scene->getActiveViewMatrix() * transform * glm::translate(glm::mat4(1), -(pen + offset) / 300.0f) * glm::scale(glm::mat4(1), glm::vec3(glyph.dimensions.x / 300.0f, glyph.dimensions.y / 300.0f, 1.0f));
+
+        glm::mat4 mvp = scene->getActiveProjectionMatrix() *
+                        scene->getActiveViewMatrix() *
+                        transform *
+                        glm::translate(glm::mat4(1), -(pen + offset) * scene->getDPU()) *
+                        glm::scale(glm::mat4(1), glm::vec3(glyph.dimensions.x * scene->getDPU(), glyph.dimensions.y * scene->getDPU(), 1.0f));
+        //fprintf(stderr, "Result: %f, %f, %f, %f\n", glyph.dimensions.x, glyph.dimensions.y, glyph.dimensions.x * scene->getDPU(), glyph.dimensions.y * scene->getDPU());
         glUniformMatrix4fv(m_transform_uniform, 1, GL_FALSE, &mvp[0][0]);
         glEnableVertexAttribArray(m_vertex_position);
         glBindBuffer(GL_ARRAY_BUFFER, QUAD_BUFFER);
@@ -69,7 +87,8 @@ void Font::draw(IScene* scene, const char* text, glm::mat4 transform, float font
 
         glDisableVertexAttribArray(m_vertex_position);
         pen.x += glyph.advance;
-        //fprintf(stderr, "(%ld)\n", (int)glyph.advance);
+        //fprintf(stderr, "(%d)\n", (int)glyph.advance);
+        prev = index;
     }
 }
 
@@ -100,8 +119,12 @@ void Font::draw2D(IScene* scene, const char* text, glm::mat4 transform, float fo
         //FT_Bitmap& bitmap = m_font_face->glyph->bitmap;
 
         glUniform3f(m_color_uniform, color.x, color.y, color.z);
-        glm::vec3 offset(glyph.bearing.x / 64, -glyph.bearing.y / 128, 0.0f);
-        glm::mat4 mvp = glm::ortho(0.0f, view.x, view.y, 0.0f, -10.0f, 10.0f) * transform * glm::rotate(glm::mat4(1), (float)M_PI, glm::vec3(0, 0, 1)) * glm::translate(glm::mat4(1), -(pen + offset)) * glm::scale(glm::mat4(1), glm::vec3(glyph.dimensions.x, glyph.dimensions.y, 1.0f));
+        glm::vec3 offset(glyph.bearing.x * scene->getDPU(), -glyph.bearing.y * scene->getDPU(), 0.0f);
+        glm::mat4 mvp = glm::ortho(0.0f, view.x, view.y, 0.0f, -10.0f, 10.0f) *
+                        transform *
+                        glm::rotate(glm::mat4(1), (float)M_PI, glm::vec3(0, 0, 1)) *
+                        glm::translate(glm::mat4(1), -(pen + offset)) *
+                        glm::scale(glm::mat4(1), glm::vec3(glyph.dimensions.x * scene->getDPU(), glyph.dimensions.y * scene->getDPU(), 1.0f));
         glUniformMatrix4fv(m_transform_uniform, 1, GL_FALSE, &mvp[0][0]);
         glEnableVertexAttribArray(m_vertex_position);
         glBindBuffer(GL_ARRAY_BUFFER, QUAD_BUFFER);
@@ -116,7 +139,7 @@ void Font::draw2D(IScene* scene, const char* text, glm::mat4 transform, float fo
         checkGLError();
 
         glDisableVertexAttribArray(m_vertex_position);
-        pen.x += glyph.advance / 64;
+        pen.x += glyph.advance;
     }
 }
 
@@ -144,7 +167,7 @@ Glyph Font::renderGlyph(char glyph, float font_size)
     checkGLError();
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmap.width, bitmap.rows, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, bitmap.buffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmap.width, bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap.buffer);
     checkGLError();
     new_glyph.id = glyph;
     new_glyph.dimensions = glm::vec2(bitmap.width, bitmap.rows);

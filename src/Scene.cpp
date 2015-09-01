@@ -1,6 +1,7 @@
 #include "CGraphics.h"
 #include "Event.h"
 #include "Game.h"
+#include "PhysicsSystem.h"
 #include "ResourceManager.h"
 #include "Scene.h"
 #include "SceneNode.h"
@@ -81,8 +82,9 @@ Scene::Scene(void)
     if(status != GL_FRAMEBUFFER_COMPLETE) {
         fprintf(stderr, "Error code 0x%x: ", status);
         switch(status) {
-            case GL_FRAMEBUFFER_UNDEFINED: fprintf(stderr, "undefined.\n"); break;
-            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: fprintf(stderr, "incomplete attachment.\n"); break;
+            case GL_FRAMEBUFFER_UNDEFINED: fprintf(stderr, "undefined.\n"); warn("Framebuffer is undefined"); break;
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: fprintf(stderr, "incomplete attachment.\n"); warn("Attachment is incomplete"); break;
+            default: warn("Unknown OpenGL error when creating framebuffer");
         }
         error("Failed to init framebuffer");
     }
@@ -125,6 +127,8 @@ void Scene::render(void)
     glDrawBuffers(2, lbuf);
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0.4, 0.4, 0.4, 1);
+    if(m_active_camera)
+        glClearColor(m_active_camera->getSkyColor().x, m_active_camera->getSkyColor().y, m_active_camera->getSkyColor().z, 1);
     glDisable(GL_CULL_FACE);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
@@ -189,6 +193,13 @@ void Scene::render(void)
             m_root_node->drawChildren(this, static_cast<RenderPass>(pass));
         }
     }
+}
+
+float Scene::getDPU(void) const
+{
+    if(m_active_camera->getOrtho())
+        return g_game->physics()->getWorldScale();
+    return m_dpu;
 }
 
 glm::mat4 const Scene::getActiveProjectionMatrix(void) const
@@ -321,6 +332,27 @@ void Scene::updateViewportSize(int width, int height)
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 }
 
+void Scene::updateViewportSize()
+{
+    if(m_active_camera)
+        m_active_camera->reProject(m_view_dims.x, m_view_dims.y);
+}
+
+glm::vec2 Scene::getViewportRemainder(void) const
+{
+    if(!m_active_camera)
+        return glm::vec2(0);
+    glm::vec2 aspect_diff = m_active_camera->getAspectDifference();
+    glm::vec2 remainder(0);
+    if(aspect_diff.x > 0) {
+        remainder.x = aspect_diff.x * m_view_dims.y;
+    } else if(aspect_diff.y > 0) {
+        remainder.y = aspect_diff.y * m_view_dims.x;
+    }
+
+    return remainder;
+}
+
 void Scene::CGraphicsCreatedCallback(const IEvent& event)
 {
     if(event.getEventType() != CGraphicsCreatedEvent::m_type) {
@@ -366,4 +398,11 @@ void Scene::deleteRecursive(unsigned long id)
                 m_root_node->removeChild(node);
         }
     }
+
+    if(m_camera_nodes.find(id) != m_camera_nodes.end()) {
+        m_camera_nodes.erase(id);
+        if(m_camera_nodes[id]->getActive())
+            m_active_camera = NULL;
+    }
+    m_light_nodes.erase(id);
 }

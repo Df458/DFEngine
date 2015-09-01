@@ -23,7 +23,6 @@ public:
     virtual bool addChild(ISceneNode* child) = 0;
     virtual bool removeChild(ISceneNode* child) = 0;
     virtual bool hasChild(ISceneNode* child) const = 0;
-    //virtual bool fromXml(rapidxml::xml_node<>* node) = 0;
     virtual bool getVisible(void) const = 0;
     virtual bool getRenders(void) const = 0;
     virtual void setRenders(bool visible) = 0;
@@ -32,35 +31,80 @@ public:
     virtual long getActor(void) const = 0;
     virtual void setTransform(Transform* trans) = 0;
     virtual void setLocalTransform(Transform* trans) = 0;
+    virtual Transform* getLocalTransform(void) const = 0;
     virtual ISceneNode* getParent(void) const = 0;
     virtual const luaL_Reg* getFuncs(void) const = 0;
+    virtual const luaL_Reg* getAttrFuncs(void) const = 0;
 protected:
     virtual void setParent(ISceneNode* parent) = 0;
 };
 
 int node_render(lua_State* state);
-int text_text(lua_State* state);
+
+int model_model(lua_State* state);
+int model_shader(lua_State* state);
+int model_texture(lua_State* state);
+
+int camera_sky(lua_State* state);
+
+int billboard_color(lua_State* state);
+int billboard_texture(lua_State* state);
+
+int particle_color(lua_State* state);
 int particle_spawning(lua_State* state);
 int particle_count(lua_State* state);
 
+int text_text(lua_State* state);
+int text_color(lua_State* state);
+
 const luaL_Reg node_default_funcs[] =
+{
+    {0, 0}
+};
+
+const luaL_Reg node_default_attr[] =
 {
     {"render", node_render},
     {0, 0}
 };
 
-const luaL_Reg node_particle_funcs[] =
+const luaL_Reg node_camera_attr[] =
+{
+    {"sky_color", camera_sky},
+    {0, 0}
+};
+
+const luaL_Reg node_model_attr[] =
+{
+    {"render", node_render},
+    {"model", model_model},
+    {"shader", model_shader},
+    {"texture", model_texture},
+    {0, 0}
+};
+
+const luaL_Reg node_billboard_attr[] =
+{
+    {"render", node_render},
+    {"color", billboard_color},
+    {"texture", billboard_texture},
+    {0, 0}
+};
+
+const luaL_Reg node_particle_attr[] =
 {
     {"render", node_render},
     {"spawning", particle_spawning},
+    {"color", particle_color},
     {"particle_count", particle_count},
     {0, 0}
 };
 
-const luaL_Reg node_text_funcs[] =
+const luaL_Reg node_text_attr[] =
 {
     {"render", node_render},
     {"text", text_text},
+    {"color", text_color},
     {0, 0}
 };
 
@@ -85,8 +129,10 @@ public:
     virtual long getActor(void) const;
     virtual ISceneNode* getParent(void) const { return u_parent; }
     virtual const luaL_Reg* getFuncs(void) const { return u_funcs; }
+    virtual const luaL_Reg* getAttrFuncs(void) const { return u_attr_funcs; }
     void setTransform(Transform* trans) final;
     void setLocalTransform(Transform* trans) final { m_local_transform = trans; }
+    Transform* getLocalTransform(void) const { return m_local_transform; }
 protected:
     void setParent(ISceneNode* parent) final;
     glm::mat4 m_final_transform;
@@ -95,6 +141,7 @@ protected:
     RenderPass m_render_pass;
     bool m_renders = true;
     const luaL_Reg* u_funcs = node_default_funcs;
+    const luaL_Reg* u_attr_funcs = node_default_attr;
 private:
     std::vector<ISceneNode*> u_children;
     ISceneNode* u_parent = nullptr;
@@ -111,14 +158,20 @@ class ModelSceneNode : public SceneNode
 {
 public:
     ModelSceneNode(void);
-    ModelSceneNode(IModel* model, IShader* shader, GLuint texture = 0, RenderPass pass = RenderPass::DYNAMIC_PASS);
+    ModelSceneNode(IModel* model, IShader* shader, Texture* texture = 0, RenderPass pass = RenderPass::DYNAMIC_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool getVisible(void);
     virtual bool fromXml(rapidxml::xml_node<>* node);
+    virtual const IModel* getModel(void) { return u_model; }
+    virtual const IShader* getShader(void) { return u_shader; }
+    virtual const Texture* getTexture(void) { return u_texture; }
+    virtual void setModel(IModel* model) { u_model = model; }
+    virtual void setShader(IShader* shader) { u_shader = shader; }
+    virtual void setTexture(Texture* texture) { u_texture = texture; }
 protected:
     IModel* u_model = nullptr;
     IShader* u_shader = nullptr;
-    GLuint u_texture = 0;
+    Texture* u_texture = 0;
 };
 
 class CameraSceneNode : public SceneNode
@@ -126,21 +179,30 @@ class CameraSceneNode : public SceneNode
 public:
     CameraSceneNode(void);
     CameraSceneNode(rapidxml::xml_node<>* node);
-    inline const glm::mat4 getProjectionMatrix(void) const { return m_projection; }
+    inline const glm::mat4 getProjectionMatrix(void) const { return m_projection;}
     inline const glm::mat4 getViewMatrix(void) const { return m_view; }
     bool fromXml(rapidxml::xml_node<>* node);
     void reProject(float width, float height);
     void lookAt(glm::vec3 target);
     void setActive(bool active) { m_active = active; }
     bool getActive(void) { return m_active; }
+    bool getOrtho(void) const { return m_ortho; }
+    void setSkyColor(RGBColor color) { m_sky_color = color; }
+    virtual const RGBColor& getSkyColor(void) const { return m_sky_color; }
+    glm::vec2 getAspectDifference(void) const;
 private:
     glm::mat4 m_view;
     glm::mat4 m_projection;
+    glm::mat4 m_offset;
     bool m_ortho = false;
     float m_fov;
     float m_near = 0.1;
     float m_far = 1000;
     bool m_active = false;
+    RGBColor m_sky_color;
+    glm::vec2 m_desired_dimensions = {1, 1};
+    float m_aspect_ratio = 1;
+    float m_desired_aspect_ratio = 1;
 };
 
 class LightSceneNode : public SceneNode
@@ -149,6 +211,7 @@ public:
     LightSceneNode(void);
     LightSceneNode(rapidxml::xml_node<>* node);
     virtual void draw(IScene* scene, RenderPass pass);
+    virtual bool fromXml(rapidxml::xml_node<>* node);
     bool  getAffectsDiffuse(void) const;
     bool  getAffectsSpecular(void) const;
     const RGBColor& getColor(void) const;
@@ -177,11 +240,13 @@ class BillboardSceneNode : public SceneNode
 {
 public:
     BillboardSceneNode();
-    BillboardSceneNode(GLuint texture, glm::vec2 dims = {1, 1}, RGBAColor color = RGBAColor(Color::White, 1.0f), RenderPass pass = RenderPass::UI_PASS);
+    BillboardSceneNode(Texture* texture, RGBAColor color = RGBAColor(Color::White, 1.0f), RenderPass pass = RenderPass::UI_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool fromXml(rapidxml::xml_node<>* node);
     void setColor(RGBAColor color) { m_color = color; }
     RGBAColor getColor(void) { return m_color; }
+    virtual const Texture* getTexture(void) { return u_texture; }
+    void setTexture(Texture* texture) { u_texture = texture; }
     virtual bool getVisible(void);
 protected:
     GLuint m_vertex_position_attrib = 0;
@@ -192,11 +257,9 @@ protected:
     GLuint m_up_uniform = 0;
     GLuint m_right_uniform = 0;
     GLuint m_dims_uniform = 0;
-    GLuint m_position_uniform = 0;
 
-    glm::vec2 m_dims;
     RGBAColor m_color = RGBAColor(Color::White, 1.0f);
-    GLuint u_texture = 0;
+    Texture* u_texture = 0;
 };
 
 struct Particle
@@ -214,7 +277,7 @@ class ParticleSceneNode : public UpdatingSceneNode
 {
 public:
     ParticleSceneNode();
-    ParticleSceneNode(GLuint texture, RGBAColor color, float rate, float life = 4, glm::vec2 dims = {1, 1}, bool burst = false, RenderPass pass = RenderPass::UI_PASS);
+    ParticleSceneNode(Texture* texture, RGBAColor color, float rate, float life = 4, glm::vec2 dims = {1, 1}, bool burst = false, RenderPass pass = RenderPass::UI_PASS);
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool fromXml(rapidxml::xml_node<>* node);
     virtual bool getVisible(void);
@@ -222,6 +285,8 @@ public:
     virtual void createParticle(void);
     bool getSpawning(void) { return m_spawning; }
     void setSpawning(bool spawning) { m_spawning = spawning; }
+    RGBAColor getStartingColor(void) const { return m_starting_color; }
+    void setStartingColor(RGBAColor color) { m_starting_color = color; }
     unsigned getParticleCount(void) { return m_particle_count; }
 protected:
     GLuint m_vertex_position_attrib = 0;
@@ -237,7 +302,7 @@ protected:
     GLuint m_particle_buffer = 0;
     GLuint m_particle_buffer_p = 0;
     GLuint m_particle_buffer_c = 0;
-    GLuint u_texture = 0;
+    Texture* u_texture = 0;
     Particle m_particles[MAX_PARTICLES];
     Particle m_particle_template;
     glm::vec3 m_particle_pos[MAX_PARTICLES];
@@ -261,11 +326,15 @@ public:
     virtual void draw(IScene* scene, RenderPass pass);
     virtual bool fromXml(rapidxml::xml_node<>* node);
     virtual bool getVisible(void);
+    void setColor(RGBColor color) { m_color = color; }
+    RGBColor getColor(void) { return m_color; }
     void setText(const char* text) { m_text = text; }
     std::string getText(void) { return m_text; }
 protected:
     std::string m_text = "";
     IFont* u_font = NULL;
+    RGBColor m_color = Color::White;
+    float m_size = 16;
 };
 
 #endif

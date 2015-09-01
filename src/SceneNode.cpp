@@ -2,12 +2,14 @@
 #include "Game.h"
 #include "ResourceManager.h"
 #include "Font.h"
+#include "PhysicsSystem.h"
 #include "Scene.h"
 #include "SceneNode.h"
 #include "Shader.h"
 #include "Util.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/norm.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <algorithm>
 
 using namespace rapidxml;
@@ -84,29 +86,30 @@ bool SceneNode::hasChild(ISceneNode* child) const
 
 bool SceneNode::fromXml(rapidxml::xml_node<>* node)
 {
-    if(xml_attribute<>* att = node->first_attribute("render", 6, false))
-        m_renders = strcmp(att->value(), "false");
+    attr(node, "renders", &m_renders);
 
     if(xml_node<>* tr = node->first_node("translate", 9, false)) {
         glm::vec3 translation(0, 0, 0);
-        if(xml_attribute<>* att = tr->first_attribute("x", 1, false))
-            translation.x = atof(att->value());
-        if(xml_attribute<>* att = tr->first_attribute("y", 1, false))
-            translation.y = atof(att->value());
-        if(xml_attribute<>* att = tr->first_attribute("z", 1, false))
-            translation.z = atof(att->value());
+        attr(tr, "x", &translation.x);
+        attr(tr, "y", &translation.y);
+        attr(tr, "z", &translation.z);
         m_local_transform->translate(translation);
     } 
 
     if(xml_node<>* tr = node->first_node("rotate", 6, false)) {
         glm::vec3 rotation(0, 0, 0);
-        if(xml_attribute<>* att = tr->first_attribute("x", 1, false))
-            rotation.x = atof(att->value());
-        if(xml_attribute<>* att = tr->first_attribute("y", 1, false))
-            rotation.y = atof(att->value());
-        if(xml_attribute<>* att = tr->first_attribute("z", 1, false))
-            rotation.z = atof(att->value());
+        attr(tr, "x", &rotation.x);
+        attr(tr, "y", &rotation.y);
+        attr(tr, "z", &rotation.z);
         m_local_transform->rotate(rotation);
+    }
+
+    if(xml_node<>* tr = node->first_node("scale", 5, false)) {
+        glm::vec3 scale(1, 1, 1);
+        attr(tr, "x", &scale.x);
+        attr(tr, "y", &scale.y);
+        attr(tr, "z", &scale.z);
+        m_local_transform->scale(scale);
     }
     return true;
 }
@@ -145,13 +148,15 @@ long SceneNode::getActor(void) const
 
 ModelSceneNode::ModelSceneNode(void)
 {
+    u_attr_funcs = node_model_attr;
     u_model = g_game->resources()->getModel("default");
     u_shader = g_game->resources()->getShader("default");
     u_texture = g_game->resources()->getTexture("default");
 }
 
-ModelSceneNode::ModelSceneNode(IModel* model, IShader* shader, GLuint texture, RenderPass pass) : SceneNode()
+ModelSceneNode::ModelSceneNode(IModel* model, IShader* shader, Texture* texture, RenderPass pass) : SceneNode()
 {
+    u_attr_funcs = node_model_attr;
     u_model = model;
     u_shader = shader;
     m_render_pass = pass;
@@ -192,37 +197,58 @@ bool ModelSceneNode::getVisible(void)
 
 CameraSceneNode::CameraSceneNode() : SceneNode()
 {
+    u_attr_funcs = node_camera_attr;
 }
 
 CameraSceneNode::CameraSceneNode(xml_node<>* node)
 {
+    u_attr_funcs = node_camera_attr;
     fromXml(node);
 }
 
 void CameraSceneNode::reProject(float width, float height)
 {
-    if(!m_ortho)
-        m_projection = glm::perspective(m_fov, width / height, m_near, m_far);
-    else
-        m_projection = glm::ortho(0.0f, width, height, 0.0f, m_near, m_far);
+    m_aspect_ratio = width / height;
+    glm::vec2 dif = getAspectDifference();
+    if(dif.x <= 0)
+        dif.x = 0;
+    if(dif.y <= 0)
+        dif.y = 0;
+
+    //fprintf(stderr, "%f, %f\n", dif.x * 0.5f, dif.y * -0.5f);
+    if(!m_ortho) {
+        m_offset = glm::translate(glm::mat4(1), glm::vec3(dif.x * height * 0.5f, dif.y * width * 0.5f, 0.0f) * g_game->physics()->getWorldScale());
+        m_projection = m_offset * glm::perspective(m_fov, m_aspect_ratio, m_near, m_far);
+    } else {
+        glm::vec2 dimensions(width, height);
+        glm::vec2 bdim(width - (height * dif.x), height - (width * dif.y));
+        m_offset = glm::translate(glm::mat4(1), glm::vec3(dif.x * (height * 0.5f), dif.y * (width * 0.5f), 0.0f) * g_game->physics()->getWorldScale());
+        bdim /= m_desired_dimensions;
+        m_projection = glm::ortho(0.0f, dimensions.x * g_game->physics()->getWorldScale(), dimensions.y * g_game->physics()->getWorldScale(), 0.0f, m_near, m_far) * m_offset * glm::scale(glm::mat4(1), glm::vec3(bdim, 1.0f));
+    }
 }
 
 bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
 {
     if(xml_node<>* projection = node->first_node("projection", 10, false)) {
         bool perspective = true;
-        if(xml_attribute<>* p_near = projection->first_attribute("near", 4, false))
-            m_near = atof(p_near->value());
-        if(xml_attribute<>* p_far = projection->first_attribute("far", 3, false))
-            m_far = atof(p_far->value());
+        attr(projection, "near", &m_near);
+        attr(projection, "far", &m_far);
         if(xml_attribute<>* p_type = projection->first_attribute("type", 4, false)) {
             if(!strcmp(p_type->value(), "perspective")) {
                 m_fov = glm::radians(90.0f);
-                if(xml_attribute<>* p_fov = projection->first_attribute("fov", 3, false))
-                    m_fov = glm::radians(atof(p_fov->value()));
+                attr(projection, "fov", &m_fov);
                 m_projection = glm::perspective(m_fov, 4.0f / 3.0f, m_near, m_far);
+                m_desired_aspect_ratio = 4.0f / 3.0f;
             } else if(!strcmp(p_type->value(), "ortho")) {
-                m_projection = glm::ortho(0.0f, 800.0f, 600.0f, 0.0f, m_near, m_far);
+                float width = 1;
+                float height = 1;
+                attr(projection, "width", &width);
+                attr(projection, "height", &height);
+                m_aspect_ratio = width / height;
+                m_desired_aspect_ratio = width / height;
+                m_desired_dimensions = glm::vec2(width, height);
+                m_projection = glm::ortho(0.0f, width, height, 0.0f, m_near, m_far);
                 m_ortho = true;
             } else {
                 warn("Invalid projection type specified.");
@@ -239,43 +265,40 @@ bool CameraSceneNode::fromXml(rapidxml::xml_node<>* node)
 
     if(xml_node<>* v_rotate = node->first_node("rotate", 6, false)) {
         glm::vec3 rotation;
-        if(xml_attribute<>* vr_x = v_rotate->first_attribute("x", 1, false))
-            rotation.x = atof(vr_x->value());
-        if(xml_attribute<>* vr_y = v_rotate->first_attribute("y", 1, false))
-            rotation.y = atof(vr_y->value());
-        if(xml_attribute<>* vr_z = v_rotate->first_attribute("z", 1, false))
-            rotation.z = atof(vr_z->value());
+        attr(v_rotate, "x", &rotation.x);
+        attr(v_rotate, "y", &rotation.y);
+        attr(v_rotate, "z", &rotation.z);
         m_final_transform = glm::mat4_cast(glm::quat(rotation));
     }
 
     if(xml_node<>* v_translate = node->first_node("translate", 9, false)) {
         glm::vec3 translation;
-        if(xml_attribute<>* vt_x = v_translate->first_attribute("x", 1, false))
-            translation.x = atof(vt_x->value());
-        if(xml_attribute<>* vt_y = v_translate->first_attribute("y", 1, false))
-            translation.y = atof(vt_y->value());
-        if(xml_attribute<>* vt_z = v_translate->first_attribute("z", 1, false))
-            translation.z = atof(vt_z->value());
 
+        attr(v_translate, "x", &translation.x);
+        attr(v_translate, "y", &translation.y);
+        attr(v_translate, "z", &translation.z);
         glm::translate(m_final_transform, translation);
     }
 
     if(xml_node<>* v_lookat = node->first_node("lookat", 6, false)) {
         glm::vec3 target;
-        if(xml_attribute<>* lt_x = v_lookat->first_attribute("x", 1, false))
-            target.x = atof(lt_x->value());
-        if(xml_attribute<>* lt_y = v_lookat->first_attribute("y", 1, false))
-            target.y = atof(lt_y->value());
-        if(xml_attribute<>* lt_z = v_lookat->first_attribute("z", 1, false))
-            target.z = atof(lt_z->value());
+        attr(v_lookat, "x", &target.x);
+        attr(v_lookat, "y", &target.y);
+        attr(v_lookat, "z", &target.z);
         m_view = glm::lookAt(glm::vec3(m_final_transform[3]), target, glm::vec3(0.0f, 1.0f, 0.0f));
     } else {
         m_view = glm::inverse(m_final_transform);
     }
 
-    if(xml_attribute<>* v_active = node->first_attribute("active", 6, false)) {
-        m_active = strcmp(v_active->value(), "false");
+    if(xml_node<>* v_lookat = node->first_node("sky_color", 9, false)) {
+        RGBColor color;
+        attr(v_lookat, "r", &color.x);
+        attr(v_lookat, "g", &color.y);
+        attr(v_lookat, "b", &color.z);
+        m_sky_color = color;
     }
+
+    attr(node, "active", &m_active);
     return true;
 }
 
@@ -287,28 +310,21 @@ void CameraSceneNode::lookAt(glm::vec3 target)
     m_view = glm::lookAt(self, target, glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+glm::vec2 CameraSceneNode::getAspectDifference(void) const
+{
+    glm::vec2 v;
+    v.x = m_aspect_ratio - m_desired_aspect_ratio;
+    v.y = (1/m_aspect_ratio) - (1/m_desired_aspect_ratio);
+    return v;
+}
+
 LightSceneNode::LightSceneNode(void) : SceneNode()
 {
 }
 
 LightSceneNode::LightSceneNode(xml_node<>* node)
 {
-    if(xml_node<>* color = node->first_node("color", 5, false)) {
-        if(xml_attribute<>* r = color->first_attribute("r", 1, false))
-            m_color.x = atof(r->value());
-        if(xml_attribute<>* g = color->first_attribute("g", 1, false))
-            m_color.y = atof(g->value());
-        if(xml_attribute<>* b = color->first_attribute("b", 1, false))
-            m_color.z = atof(b->value());
-    }
-    if(xml_node<>* direction = node->first_node("direction", 9, false)) {
-        if(xml_attribute<>* x = direction->first_attribute("x", 1, false))
-            m_direction.x = atof(x->value());
-        if(xml_attribute<>* y = direction->first_attribute("y", 1, false))
-            m_direction.y = atof(y->value());
-        if(xml_attribute<>* z = direction->first_attribute("z", 1, false))
-            m_direction.z = atof(z->value());
-    }
+    fromXml(node);
 //:TODO: 20.02.15 20:32:50, df458
 // Add extra
     m_render_pass = LIGHTING_PASS;
@@ -353,6 +369,33 @@ void LightSceneNode::draw(IScene* scene, RenderPass pass)
     glDisableVertexAttribArray(m_vertex_attrib);
 }
 
+bool LightSceneNode::fromXml(rapidxml::xml_node<>* node)
+{
+    SceneNode::fromXml(node);
+
+    if(xml_node<>* color = node->first_node("color", 5, false)) {
+        attr(color, "r", &m_color.x);
+        attr(color, "g", &m_color.y);
+        attr(color, "b", &m_color.z);
+    }
+    if(xml_node<>* direction = node->first_node("direction", 9, false)) {
+        if(xml_attribute<>* x = direction->first_attribute("x", 1, false))
+            m_direction.x = atof(x->value());
+        if(xml_attribute<>* y = direction->first_attribute("y", 1, false))
+            m_direction.y = atof(y->value());
+        if(xml_attribute<>* z = direction->first_attribute("z", 1, false))
+            m_direction.z = atof(z->value());
+        attr(direction, "x", &m_direction.x);
+        attr(direction, "y", &m_direction.y);
+        attr(direction, "z", &m_direction.z);
+    }
+    attr(node, "strength", &m_strength);
+    attr(node, "affects_diffuse", &m_diffuse);
+    attr(node, "affects_specular", &m_specular);
+
+    return true;
+}
+
 bool LightSceneNode::getAffectsDiffuse(void) const
 {
     return m_diffuse;
@@ -395,33 +438,31 @@ void LightSceneNode::setStrength(float strength)
 
 BillboardSceneNode::BillboardSceneNode()
 {
+    u_attr_funcs = node_billboard_attr;
     m_render_pass = RenderPass::UI_PASS;
     m_vertex_position_attrib = glGetAttribLocation(SPRITE_PROGRAM, "vertex_pos");
     m_texture_uniform = glGetUniformLocation(SPRITE_PROGRAM, "texture");
     m_color_uniform = glGetUniformLocation(SPRITE_PROGRAM, "color");
     m_transform_uniform = glGetUniformLocation(SPRITE_PROGRAM, "model_view_projection");
-    m_position_uniform = glGetUniformLocation(SPRITE_PROGRAM, "position");
     m_up_uniform = glGetUniformLocation(SPRITE_PROGRAM, "up");
     m_right_uniform = glGetUniformLocation(SPRITE_PROGRAM, "right");
     m_dims_uniform = glGetUniformLocation(SPRITE_PROGRAM, "dims");
     checkGLError();
 }
 
-BillboardSceneNode::BillboardSceneNode(GLuint texture, glm::vec2 dims, RGBAColor color, RenderPass pass) : SceneNode()
+BillboardSceneNode::BillboardSceneNode(Texture* texture, RGBAColor color, RenderPass pass) : SceneNode()
 {
+    u_attr_funcs = node_billboard_attr;
     m_render_pass = pass;
     u_texture = texture;
     m_vertex_position_attrib = glGetAttribLocation(SPRITE_PROGRAM, "vertex_pos");
     m_texture_uniform = glGetUniformLocation(SPRITE_PROGRAM, "texture");
     m_color_uniform = glGetUniformLocation(SPRITE_PROGRAM, "color");
     m_transform_uniform = glGetUniformLocation(SPRITE_PROGRAM, "model_view_projection");
-    m_position_uniform = glGetUniformLocation(SPRITE_PROGRAM, "position");
     m_up_uniform = glGetUniformLocation(SPRITE_PROGRAM, "up");
     m_right_uniform = glGetUniformLocation(SPRITE_PROGRAM, "right");
     m_dims_uniform = glGetUniformLocation(SPRITE_PROGRAM, "dims");
     checkGLError();
-
-    m_dims = dims;
     m_color = color;
 }
 
@@ -435,13 +476,19 @@ void BillboardSceneNode::draw(IScene* scene, RenderPass pass)
     checkGLError();
 
     glm::mat4 view = scene->getActiveViewMatrix();
-    glm::mat4 transform_matrix = scene->getActiveProjectionMatrix() * view /* scene->getMatrix() * m_final_transform*/;
+    glm::mat4 world = scene->getMatrix() * m_final_transform;
+    glm::vec3 pos;
+    glm::vec3 scale;
+    glm::quat rot;
+    glm::vec3 skew;
+    glm::vec4 persp;
+    glm::decompose(world, scale, rot, pos, skew, persp);
+    glm::mat4 transform_matrix = scene->getActiveProjectionMatrix() * view * glm::translate(glm::mat4(1), pos) * glm::mat4_cast(glm::quat(glm::vec3(0.0f, 0.0f, -glm::roll(rot)))) * glm::scale(glm::mat4(1), scale);
     glUniformMatrix4fv(m_transform_uniform, 1, GL_FALSE, &transform_matrix[0][0]);
     glUniform3f(m_up_uniform, view[0][1], view[1][1], view[2][1]);
     checkGLError();
     glUniform3f(m_right_uniform, view[0][0], view[1][0], view[2][0]);
-    glUniform3f(m_position_uniform, m_final_transform[3][0], m_final_transform[3][1], m_final_transform[3][2]);
-    glUniform2f(m_dims_uniform, m_dims.x, m_dims.y);
+    glUniform2f(m_dims_uniform, (float)u_texture->texture_width * scene->getDPU(), (float)u_texture->texture_height * scene->getDPU());
     glUniform4f(m_color_uniform, m_color.x, m_color.y, m_color.z, m_color.w);
     glEnableVertexAttribArray(m_vertex_position_attrib);
     glBindBuffer(GL_ARRAY_BUFFER, QUAD_BUFFER);
@@ -449,7 +496,7 @@ void BillboardSceneNode::draw(IScene* scene, RenderPass pass)
     checkGLError();
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, u_texture);
+    glBindTexture(GL_TEXTURE_2D, u_texture->texture_handle);
     glUniform1i(m_texture_uniform, 0);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -464,19 +511,11 @@ bool BillboardSceneNode::fromXml(rapidxml::xml_node<>* node)
 
     if(xml_attribute<>* tex_att = node->first_attribute("id", 2, false))
         u_texture = g_game->resources()->getTexture(tex_att->value());
-    if(xml_attribute<>* dw_att = node->first_attribute("width", 5, false))
-        m_dims.x = atof(dw_att->value());
-    if(xml_attribute<>* dh_att = node->first_attribute("height", 6, false))
-        m_dims.y = atof(dh_att->value());
     if(xml_node<>* ncolor = node->first_node("color", 5, false)) {
-        if(xml_attribute<>* r = ncolor->first_attribute("r", 1, false))
-            m_color.x = atof(r->value());
-        if(xml_attribute<>* g = ncolor->first_attribute("g", 1, false))
-            m_color.y = atof(g->value());
-        if(xml_attribute<>* b = ncolor->first_attribute("b", 1, false))
-            m_color.z = atof(b->value());
-        if(xml_attribute<>* a = ncolor->first_attribute("a", 1, false))
-            m_color.w = atof(a->value());
+        attr(ncolor, "r", &m_color.x);
+        attr(ncolor, "g", &m_color.y);
+        attr(ncolor, "b", &m_color.z);
+        attr(ncolor, "a", &m_color.w);
     }
     return true;
 }
@@ -489,7 +528,7 @@ bool BillboardSceneNode::getVisible(void)
 
 ParticleSceneNode::ParticleSceneNode()
 {
-    u_funcs = node_particle_funcs;
+    u_attr_funcs = node_particle_attr;
     m_render_pass = RenderPass::UI_PASS;
     m_vertex_position_attrib = glGetAttribLocation(PARTICLE_PROGRAM, "vertex_pos");
     m_texture_uniform = glGetUniformLocation(PARTICLE_PROGRAM, "texture");
@@ -511,9 +550,9 @@ ParticleSceneNode::ParticleSceneNode()
     checkGLError();
 }
 
-ParticleSceneNode::ParticleSceneNode(GLuint texture, RGBAColor color, float rate, float life, glm::vec2 dims, bool burst, RenderPass pass) : UpdatingSceneNode()
+ParticleSceneNode::ParticleSceneNode(Texture* texture, RGBAColor color, float rate, float life, glm::vec2 dims, bool burst, RenderPass pass) : UpdatingSceneNode()
 {
-    u_funcs = node_particle_funcs;
+    u_attr_funcs = node_particle_attr;
 
     m_render_pass = pass;
     u_texture = texture;
@@ -588,7 +627,7 @@ void ParticleSceneNode::draw(IScene* scene, RenderPass pass)
     checkGLError();
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, u_texture);
+    glBindTexture(GL_TEXTURE_2D, u_texture->texture_handle);
     glUniform1i(m_texture_uniform, 0);
     checkGLError();
 
@@ -615,26 +654,18 @@ bool ParticleSceneNode::fromXml(rapidxml::xml_node<>* node)
 
     if(xml_attribute<>* tex_att = node->first_attribute("id", 2, false))
         u_texture = g_game->resources()->getTexture(tex_att->value());
-    if(xml_attribute<>* dw_att = node->first_attribute("width", 5, false))
-        m_dims.x = atof(dw_att->value());
-    if(xml_attribute<>* dh_att = node->first_attribute("height", 6, false))
-        m_dims.y = atof(dh_att->value());
-    if(xml_attribute<>* rt_att = node->first_attribute("rate", 4, false))
-        m_rate = atof(rt_att->value());
-    if(xml_attribute<>* lf_att = node->first_attribute("life", 4, false))
-        m_starting_life = atof(lf_att->value());
-    if(xml_attribute<>* br_att = node->first_attribute("burst", 5, false))
-        m_burst = strcmp(br_att->value(), "false");
+    attr(node, "width", &m_dims.x);
+    attr(node, "height", &m_dims.y);
+    attr(node, "rate", &m_rate);
+    attr(node, "life", &m_starting_life);
+    attr(node, "burst", &m_burst);
+    attr(node, "spawning", &m_spawning);
     RGBAColor color(Color::White, 1.0f);
     if(xml_node<>* ncolor = node->first_node("color", 5, false)) {
-        if(xml_attribute<>* r = ncolor->first_attribute("r", 1, false))
-            m_starting_color.x = atof(r->value());
-        if(xml_attribute<>* g = ncolor->first_attribute("g", 1, false))
-            m_starting_color.y = atof(g->value());
-        if(xml_attribute<>* b = ncolor->first_attribute("b", 1, false))
-            m_starting_color.z = atof(b->value());
-        if(xml_attribute<>* a = ncolor->first_attribute("a", 1, false))
-            m_starting_color.w = atof(a->value());
+        attr(ncolor, "r", &m_starting_color.x);
+        attr(ncolor, "g", &m_starting_color.y);
+        attr(ncolor, "b", &m_starting_color.z);
+        attr(ncolor, "a", &m_starting_color.w);
     }
     return true;
 }
@@ -710,12 +741,12 @@ bool ParticleSceneNode::getVisible(void)
 TextSceneNode::TextSceneNode()
 {
     m_render_pass = RenderPass::UI_PASS;
-    u_funcs = node_text_funcs;
+    u_attr_funcs = node_text_attr;
 }
 
 TextSceneNode::TextSceneNode(IFont* font, const char* text, RenderPass pass) : SceneNode()
 {
-    u_funcs = node_text_funcs;
+    u_attr_funcs = node_text_attr;
 
     u_font = font;
     m_render_pass = pass;
@@ -724,8 +755,10 @@ TextSceneNode::TextSceneNode(IFont* font, const char* text, RenderPass pass) : S
 
 void TextSceneNode::draw(IScene* scene, RenderPass pass)
 {
+    if(pass != m_render_pass || !m_renders)
+        return;
     m_final_transform = scene->getMatrix() * u_transform_source->getWorldTransform() * m_local_transform->getWorldTransform();
-    u_font->draw(scene, m_text.c_str(), m_final_transform);
+    u_font->draw(scene, m_text.c_str(), m_final_transform, m_size, m_color);
 }
 
 bool TextSceneNode::fromXml(rapidxml::xml_node<>* node)
@@ -759,6 +792,186 @@ int node_render(lua_State* state)
         return 0;
     } else
         lua_pushboolean(state, node->getRenders());
+    return 1;
+}
+
+int model_model(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a model, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    ModelSceneNode* node = (ModelSceneNode*)gfx->getNode();
+    if(lua_gettop(state) > 1) {
+            node->setModel(g_game->resources()->getModel(lua_tostring(state, 2))); 
+        return 0;
+    }
+    lua_pushstring(state, node->getModel()->getName().c_str());
+    return 1;
+}
+
+int model_shader(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a model, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    ModelSceneNode* node = (ModelSceneNode*)gfx->getNode();
+    if(lua_gettop(state) > 1) {
+            node->setShader(g_game->resources()->getShader(lua_tostring(state, 2)));
+        return 0;
+    }
+    lua_pushstring(state, node->getShader()->getName().c_str());
+    return 1;
+}
+
+int model_texture(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a model, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    ModelSceneNode* node = (ModelSceneNode*)gfx->getNode();
+    if(lua_gettop(state) > 1) {
+            node->setTexture(g_game->resources()->getTexture(lua_tostring(state, 2)));
+        return 0;
+    }
+    lua_pushstring(state, node->getTexture()->name.c_str());
+    return 1;
+}
+
+int camera_sky(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access render state, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    CameraSceneNode* node = (CameraSceneNode*)gfx->getNode();
+    RGBColor color;
+    if(lua_gettop(state) > 1) {
+        lua_getfield(state, 2, "r");
+        color.x = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "g");
+        color.y = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "b");
+        color.z = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        node->setSkyColor(color);
+        return 0;
+    }
+    color = node->getSkyColor();
+    lua_newtable(state);
+    lua_pushnumber(state, color.x);
+    lua_setfield(state, -2, "r");
+    lua_pushnumber(state, color.y);
+    lua_setfield(state, -2, "g");
+    lua_pushnumber(state, color.z);
+    lua_setfield(state, -2, "b");
+    return 1;
+}
+
+int billboard_texture(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a billboard, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    BillboardSceneNode* node = (BillboardSceneNode*)gfx->getNode();
+    if(lua_gettop(state) > 1) {
+            node->setTexture(g_game->resources()->getTexture(lua_tostring(state, 2)));
+        return 0;
+    }
+    lua_pushstring(state, node->getTexture()->name.c_str());
+    return 1;
+}
+
+int billboard_color(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a billboard, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    BillboardSceneNode* node = (BillboardSceneNode*)gfx->getNode();
+    RGBAColor color;
+    if(lua_gettop(state) > 1) {
+        lua_getfield(state, 2, "r");
+        color.x = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "g");
+        color.y = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "b");
+        color.z = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "a");
+        color.w = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        node->setColor(color);
+        return 0;
+    }
+    color = node->getColor();
+    lua_newtable(state);
+    lua_pushnumber(state, color.x);
+    lua_setfield(state, -2, "r");
+    lua_pushnumber(state, color.y);
+    lua_setfield(state, -2, "g");
+    lua_pushnumber(state, color.z);
+    lua_setfield(state, -2, "b");
+    lua_pushnumber(state, color.w);
+    lua_setfield(state, -2, "a");
+    return 1;
+}
+
+int particle_color(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access a particle system, but the Graphics Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    ParticleSceneNode* node = (ParticleSceneNode*)gfx->getNode();
+    RGBAColor color;
+    if(lua_gettop(state) > 1) {
+        lua_getfield(state, 2, "r");
+        color.x = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "g");
+        color.y = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "b");
+        color.z = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "a");
+        color.w = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        node->setStartingColor(color);
+        return 0;
+    }
+    color = node->getStartingColor();
+    lua_newtable(state);
+    lua_pushnumber(state, color.x);
+    lua_setfield(state, -2, "r");
+    lua_pushnumber(state, color.y);
+    lua_setfield(state, -2, "g");
+    lua_pushnumber(state, color.z);
+    lua_setfield(state, -2, "b");
+    lua_pushnumber(state, color.w);
+    lua_setfield(state, -2, "a");
     return 1;
 }
 
@@ -806,5 +1019,40 @@ int text_text(lua_State* state)
         return 0;
     } else
         lua_pushstring(state, node->getText().c_str());
+    return 1;
+}
+
+int text_color(lua_State* state)
+{
+    lua_getfield(state, 1, "instance");
+    if(!lua_isuserdata(state, -1))
+        return luaL_error(state, "Trying to access text, but the Text Component is missing its instance!");
+    CGraphics* gfx = *static_cast<CGraphics**>(lua_touserdata(state, -1));
+    lua_pop(state, 1);
+
+    TextSceneNode* node = (TextSceneNode*)gfx->getNode();
+    RGBColor color;
+    if(lua_gettop(state) > 1) {
+        lua_getfield(state, 2, "r");
+        color.x = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "g");
+        color.y = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        lua_getfield(state, 2, "b");
+        color.z = lua_tonumber(state, -1);
+        lua_pop(state, 1);
+        node->setColor(color);
+        return 0;
+    }
+    color = node->getColor();
+    lua_newtable(state);
+    lua_pushnumber(state, color.x);
+    lua_setfield(state, -2, "r");
+    lua_pushnumber(state, color.y);
+    lua_setfield(state, -2, "g");
+    lua_pushnumber(state, color.z);
+    lua_setfield(state, -2, "b");
+    return 1;
     return 1;
 }

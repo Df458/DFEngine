@@ -28,6 +28,7 @@ public:
     AudioSystem(void);
     virtual ~AudioSystem(void) {}
     virtual bool initialize(void);
+    virtual void update(float dt);
     virtual void render(void) const;
     virtual void cleanup(void);
 

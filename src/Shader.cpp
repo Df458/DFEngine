@@ -3,7 +3,9 @@
 #include "Shader.h"
 #include "Util.h"
 
-BasicShader::BasicShader(GLuint program) {
+BasicShader::BasicShader(GLuint program, std::string name)
+{
+    m_name = name;
     m_program = program;
     m_vertex_position_attrib = glGetAttribLocation(m_program, "vertex_pos");
     m_vertex_uv_attrib = glGetAttribLocation(m_program, "vertex_uv");
@@ -15,21 +17,24 @@ BasicShader::BasicShader(GLuint program) {
     checkGLError();
 }
 
-BasicShader::~BasicShader(void) {
+BasicShader::~BasicShader(void)
+{
 }
 
-void BasicShader::cleanup(void) {
+void BasicShader::cleanup(void)
+{
     glDeleteProgram(m_program);
 }
 
-void BasicShader::prepareForRender(IScene* scene, IModel* model, glm::mat4 world_matrix, GLuint texture) {
+void BasicShader::prepareForRender(IScene* scene, IModel* model, glm::mat4 world_matrix, Texture* texture)
+{
     glUseProgram(m_program);
     checkGLError();
 
     glm::mat4 vp_matrix = scene->getActiveProjectionMatrix() * scene->getActiveViewMatrix();
     glm::mat4 world_matrix_final = scene->getMatrix() * world_matrix;
     glUniformMatrix4fv(m_vp_uniform, 1, GL_FALSE, &vp_matrix[0][0]);
-    glUniformMatrix4fv(m_w_uniform, 1, GL_FALSE, &world_matrix[0][0]);
+    glUniformMatrix4fv(m_w_uniform, 1, GL_FALSE, &world_matrix_final[0][0]);
     glUniform4f(m_color_uniform, 1.0f, 0.7f, 0.0f, 1.0f);
     checkGLError();
 
@@ -53,12 +58,13 @@ void BasicShader::prepareForRender(IScene* scene, IModel* model, glm::mat4 world
     if(!texture)
         glBindTexture(GL_TEXTURE_2D, BLANK_TEXTURE);
     else
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, texture->texture_handle);
     glUniform1i(m_texture_uniform, 0);
     checkGLError();
 }
 
-void BasicShader::postRender(void) {
+void BasicShader::postRender(void)
+{
     glDisableVertexAttribArray(m_vertex_position_attrib);
     glDisableVertexAttribArray(m_vertex_normal_attrib);
     glDisableVertexAttribArray(m_vertex_uv_attrib);

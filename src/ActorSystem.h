@@ -7,6 +7,7 @@ extern "C" {
 }
 #include <map>
 #include <set>
+#include <vector>
 
 class Actor;
 class ActorConstructionData;
@@ -17,13 +18,14 @@ class ActorSystem : public ISystem
 public:
     ActorSystem(void);
     bool initialize(void);
-    void step(float delta_time);
+    void update(float delta_time);
     void cleanup(void);
     void clear(void);
     void softClear(void);
 
     Actor* getActor(unsigned long id) const;
     Actor* getActor(const char* name) const;
+    std::vector<Actor*> getActors(const char* name) const;
     Actor* getLastActor() const;
     Actor* createActor(ActorConstructionData* actor_data, Transform* transform = NULL);
     Actor* createActor(std::string name, Transform* transform = NULL);

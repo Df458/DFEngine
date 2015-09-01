@@ -4,8 +4,10 @@
 #include "ActorSystem.h"
 #include "Component.h"
 #include "Transform.h"
+#include "XmlSerializable.h"
 
-extern "C" {
+extern "C"
+{
 #include <lua.h>
 #include <lauxlib.h>
 }
@@ -44,9 +46,11 @@ public:
 
     friend class ActorSystem;
     friend int actor_get_component(lua_State* state);
+    friend int actor_newindex(lua_State* state);
 protected:
     std::string m_type;
     std::set<IComponent*> m_components;
+    std::set<IComponent*> m_updating_components;
     std::set<CScript*> m_scripts;
     std::unordered_map<std::string, IComponent*> m_named_components;
     //std::map<ComponentID, IComponent*> m_components;
@@ -61,7 +65,7 @@ protected:
     void _destroy(void);
 };
 
-class ActorConstructionData
+class ActorConstructionData : public IXmlSerializable
 {
 public:
     ActorConstructionData(void);
@@ -72,11 +76,11 @@ public:
     inline bool isPersistent(void) const { return m_persistent; }
     std::string getName(void) const { return m_name; }
     void setName(std::string name) { m_name = name; }
+    bool fromXml(rapidxml::xml_node<>* node);
 
     friend bool Actor::applyData(ActorConstructionData* data);
     friend bool Actor::applyTransform(ActorConstructionData* data, Transform* transform);
 protected:
-    virtual bool constructFromXml(rapidxml::xml_node<>* root_node);
     Transform m_transform;
     rapidxml::xml_node<>* u_root_node;
     rapidxml::xml_node<>* u_translation_node;
@@ -105,6 +109,11 @@ int actor_destroy(lua_State* state);
 int actor_apply_force(lua_State* state); // TODO: Move this to CRigidbody
 int actor_get_component(lua_State* state);
 int actor_transform(lua_State* state);
+int actor_register_tween(lua_State* state);
+int actor_get_tween_value(lua_State* state);
+int actor_get_tween(lua_State* state);
+int actor_index(lua_State* state);
+int actor_newindex(lua_State* state);
 
 const luaL_Reg actor_funcs[] =
 {
@@ -115,6 +124,14 @@ const luaL_Reg actor_funcs[] =
     {"get_component", actor_get_component},
     {"transform", actor_transform},
     {"destroy", actor_destroy},
+    {"register_tween", actor_register_tween},
+    {0, 0}
+};
+
+const luaL_Reg actor_meta[] =
+{
+    {"__index", actor_index},
+    {"__newindex", actor_newindex},
     {0, 0}
 };
 

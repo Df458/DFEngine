@@ -20,7 +20,6 @@ public:
     InputSystem(GraphicsSystem* gfx, IEventManager* events);
     virtual ~InputSystem(void);
     virtual bool initialize(void);
-    virtual void update(void) = 0;
     virtual void cleanup(void);
     virtual void pushGameEvents(void);
     inline int getKeyState(char key_char) const { return m_keys[(int)key_char]; }
@@ -51,7 +50,7 @@ class DFBaseInputSystem : public InputSystem
 public:
     DFBaseInputSystem(GraphicsSystem* gfx, IEventManager* events);
     virtual ~DFBaseInputSystem(void);
-    virtual void update(void);
+    virtual void update(float dt);
     virtual void pushGameEvents(void) final;
 
 protected:

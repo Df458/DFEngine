@@ -16,6 +16,7 @@ class IModel;
 class IShader;
 class ISound;
 struct Material;
+struct Texture;
 
 class ResourceManager
 {
@@ -35,7 +36,7 @@ public:
     virtual char* const getScript(std::string id) = 0;
     virtual IShader* getShader(std::string id) = 0;
     virtual Material* getShaderMaterial(std::string id) = 0;
-    virtual GLuint getTexture(std::string id) = 0;
+    virtual Texture* getTexture(std::string id) = 0;
     virtual bool loadActor(std::string id) = 0;
     virtual bool loadAudio(std::string id) = 0;
     virtual bool loadAudioStream(std::string id) = 0;
@@ -69,7 +70,7 @@ public:
     virtual char* const getScript(std::string id);
     virtual IShader* getShader(std::string id);
     virtual Material* getShaderMaterial(std::string id);
-    virtual GLuint getTexture(std::string id);
+    virtual Texture* getTexture(std::string id);
     virtual bool loadActor(std::string id);
     virtual bool loadAudio(std::string id);
     virtual bool loadAudioStream(std::string id);
@@ -94,19 +95,19 @@ protected:
     std::unordered_map<std::string, IShader*> m_shaders;
     std::unordered_map<std::string, Material*> m_shader_materials;
     std::unordered_map<std::string, char*> m_scripts;
-    std::unordered_map<std::string, GLuint> m_textures;
+    std::unordered_map<std::string, Texture*> m_textures;
     virtual StaticActorConstructionData* _loadActor(std::string id);
     virtual ISound* _loadAudio(std::string id);
     virtual ISound* _loadAudioStream(std::string id);
     virtual IFont* _loadFont(std::string id);
     virtual Level* _loadLevel(std::string id);
-    virtual IModel* _loadModel(std::string id);
+    virtual IModel* _loadModel(std::string id, std::string name);
     virtual PhysicsMaterial _loadPhysicsMaterial(std::string id);
     virtual GLuint _loadProgram(std::string id);
-    virtual IShader* _loadShader(std::string id);
+    virtual IShader* _loadShader(std::string id, std::string name);
     virtual Material* _loadShaderMaterial(std::string id);
     virtual char* _loadScript(std::string id);
-    virtual GLuint _loadTexture(std::string id);
+    virtual Texture* _loadTexture(std::string id, std::string name);
 
     FT_Library m_font_library;
 };

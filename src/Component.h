@@ -24,6 +24,8 @@ public:
     inline const char* getName(void) const { return m_name; }
     inline void setName(const char* name) { m_name = name; }
     virtual const luaL_Reg* getFuncs(void) const = 0;
+    virtual const luaL_Reg* getMetaFuncs(void) const = 0;
+    virtual bool get_has_update(void) const = 0;
 protected:
     Actor* u_owner;
 private:

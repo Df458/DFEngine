@@ -1,2 +1,19 @@
-<level gravity.y="-9.8">
+<level world_scale="0.02">
+    <actor name="camera">
+        <translate z="-3"/>
+        <camera name="camera">
+            <projection type="ortho" width="640" height="640" near="0.1" far="100"/>
+            <lookat />
+        </camera>
+    </actor>
+    <actor>
+        <translate x="-13" y="13"/>
+        <graphics name="logo">
+            <sprite id="dfEngine">
+                <color a="0"/>
+                <scale x="2.0" y="2.0"/>
+            </sprite>
+        </graphics>
+        <script id="splash"/>
+    </actor>
 </level>

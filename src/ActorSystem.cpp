@@ -15,13 +15,15 @@ bool ActorSystem::initialize(void)
     return true;
 }
 
-void ActorSystem::step(float delta_time)
+void ActorSystem::update(float delta_time)
 {
-    for(auto i : m_new_actors) {
-        i->initialize();
-        m_actors[i->getID()] = i;
+    if(m_new_actors.size() != 0) {
+        for(auto i : m_new_actors) {
+            i->initialize();
+            m_actors[i->getID()] = i;
+        }
+        m_new_actors.clear();
     }
-    m_new_actors.clear();
 
     for(auto i = m_actors.begin(); i != m_actors.end();) {
         Actor* actor = i->second;
@@ -80,8 +82,20 @@ Actor* ActorSystem::getActor(const char* name) const
             return i->second;
     }
 
-    warn("Requesting an Actor that doesn't exist.");
+    //warn("Requesting an Actor that doesn't exist.");
+    //fprintf(stderr, "Actor name: %s\n", name);
     return NULL;
+}
+
+std::vector<Actor*> ActorSystem::getActors(const char* name) const
+{
+    std::vector<Actor*> actors;
+    for(auto i = m_actors.begin(); i != m_actors.end(); ++i) {
+        if(i->second->getName() == name)
+            actors.push_back(i->second);
+    }
+
+    return actors;
 }
 
 Actor* ActorSystem::getLastActor() const
@@ -127,7 +141,7 @@ Actor* ActorSystem::createActor(std::string name, Transform* transform)
         return 0;
     }
     ActorConstructionData* data = g_game->resources()->getActor(name);
-    return createActor(data);
+    return createActor(data, transform);
 }
 
 Actor* ActorSystem::createActor(lua_State* state)
