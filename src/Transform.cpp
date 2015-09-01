@@ -13,29 +13,49 @@ Transform::Transform(const Transform& transform)
     setWorldTransform(transform.m_graphics_transform);
 }
 
+Transform::Transform(const btTransform& transform)
+{
+    setWorldTransform(transform);
+}
+
 Transform::Transform(lua_State* state)
 {
     lua_getfield(state, -1, "position");
     lua_getfield(state, -1, "x");
-    m_translation.x = lua_tonumber(state, -1);
+    if(lua_isnumber(state, -1))
+        m_translation.x = lua_tonumber(state, -1);
     lua_getfield(state, -2, "y");
-    m_translation.y = lua_tonumber(state, -1);
+    if(lua_isnumber(state, -1))
+        m_translation.y = lua_tonumber(state, -1);
     lua_getfield(state, -3, "z");
-    m_translation.z = lua_tonumber(state, -1);
+    if(lua_isnumber(state, -1))
+        m_translation.z = lua_tonumber(state, -1);
     lua_pop(state, 4);
+    
     // TODO: Rotations
-    //lua_getfield(state, -1, "rotation");
-    //lua_getfield(state, -1, "x");
-    //lua_getfield(state, -2, "y");
-    //lua_getfield(state, -3, "z");
-    //lua_pop(state, 4);
+    glm::vec3 eul;
+    lua_getfield(state, -1, "rotation");
+    lua_getfield(state, -1, "x");
+    if(lua_isnumber(state, -1))
+        eul.x = lua_tonumber(state, -1);
+    lua_getfield(state, -2, "y");
+    if(lua_isnumber(state, -1))
+        eul.y = lua_tonumber(state, -1);
+    lua_getfield(state, -3, "z");
+    if(lua_isnumber(state, -1))
+        eul.z = lua_tonumber(state, -1);
+    lua_pop(state, 4);
+
     lua_getfield(state, -1, "scale");
     lua_getfield(state, -1, "x");
-    m_scaling.x = lua_tonumber(state, -1);
+    if(lua_isnumber(state, -1))
+        m_scaling.x = lua_tonumber(state, -1);
     lua_getfield(state, -2, "y");
-    m_scaling.y = lua_tonumber(state, -1);
+    if(lua_isnumber(state, -1))
+        m_scaling.y = lua_tonumber(state, -1);
     lua_getfield(state, -3, "z");
-    m_scaling.z = lua_tonumber(state, -1);
+    if(lua_isnumber(state, -1))
+        m_scaling.z = lua_tonumber(state, -1);
     lua_pop(state, 4);
 }
 
@@ -62,8 +82,8 @@ void Transform::setWorldTransform(const btTransform& transform)
     float mat[16];
     m_physics_transform.getOpenGLMatrix(mat);
     mat[15] = 1;
-    //m_graphics_transform = glm::make_mat4x4(mat);
     m_graphics_transform = glm::scale(glm::make_mat4x4(mat), m_scaling);
+    glm::decompose(m_graphics_transform, &m_translation, &m_rotation, &m_scaling);
 }
 
 void Transform::setWorldTransform(const glm::mat4& transform)

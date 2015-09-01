@@ -14,6 +14,7 @@ class Transform : public btMotionState
 public:
     Transform();
     Transform(const Transform& transform);
+    Transform(const btTransform& transform);
     Transform(lua_State* state);
     Transform(btTransform transform);
     void getWorldTransform(btTransform& transform) const;
